@@ -49,7 +49,7 @@ Include LiveBlade wherever you load Blade templates:
 
 Below is a full example using Laravel and LiveBlade.
 
-### Controller
+## Controller
 
 ```php
 // TaskController.php
