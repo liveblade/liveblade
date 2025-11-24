@@ -71,7 +71,7 @@ public function index(Request $request)
     return view('tasks.index');
 }
 ```
-
+## Main View / Index
 ```blade
 // Blade View (tasks/index.blade.php)
 <div data-lb="html" data-lb-fetch="/tasks" id="tasksTable">
@@ -79,7 +79,8 @@ public function index(Request $request)
 </div>
 ```
 
-lade Partial (tasks/_table.blade.php)
+## Partial View
+// Blade View Partial (tasks/_table.blade.php)
 ```blade
 <table class="table table-bordered">
     <thead>
