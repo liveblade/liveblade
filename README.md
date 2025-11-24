@@ -1,63 +1,61 @@
 # LiveBlade
 
-> Server‑driven reactivity for Laravel Blade — no Livewire, Vue or Inertia required.
+> Server-driven reactivity for Laravel Blade — no Livewire, Vue or Inertia required.
 
-LiveBlade enables **dynamic tables, filters, pagination, sorting and auto‑updating KPIs** using only:
-- Laravel Blade views (`view()->render()`)
-- Lightweight vanilla JavaScript (`~9 KB`)
-- Simple HTML attributes (`data-lb=*`)
+LiveBlade enables dynamic UI behavior using:
+- Laravel Blade partials (`view()->render()`)
+- Lightweight vanilla JavaScript (~9 KB)
+- Simple HTML attributes (`data-lb="..."`)
 
-It mimics the power of Livewire/HTMX but keeps the workflow **100% Blade-first**, zero build pipeline, zero framework lock‑in.
+No SPA. No state duplication. Always backend-driven.
 
-Perfect for:
+Great for:
 - Admin dashboards
-- Table-heavy applications
-- Projects migrating from jQuery
-- Teams that prefer Blade over SPA frameworks
+- Data tables
+- Teams that prefer Blade-first development
 
 ---
 
-## ✨ Features
+## Features
 
 | Feature | Status |
 |--------|:------:|
-| AJAX HTML Tables | ✅ |
-| Pagination Hijacking | ✅ |
-| Sorting (server‑side) | ✅ |
-| Debounced Search | ✅ |
-| Filter controls | ✅ |
-| Toggle Actions (POST switches) | ✅ |
+| AJAX Blade partial updates | ✅ |
+| Laravel pagination hijack | ✅ |
+| Sorting | ✅ |
+| Debounced search | ✅ |
+| Filters (select/date) | ✅ |
+| Toggle via POST | ✅ |
 | KPI auto polling | ✅ |
-| Skeleton loading state | ✅ |
-| Browser back/forward support | ✅ |
+| Skeleton loading UI | ✅ |
+| Back/forward button support | ✅ |
 | Zero dependencies | 🚀 |
-
-No client state — everything comes from the Laravel backend.
 
 ---
 
-## 📦 Installation
+## Installation
 
-Include LiveBlade wherever you load Blade templates:
-
-```html
+```blade
 <script src="/js/liveblade.js"></script>
 <link rel="stylesheet" href="/css/liveblade.css">
+<meta name="csrf-token" content="{{ csrf_token() }}">
 ```
 
+LiveBlade auto-initializes on page load.
 
-## 🔧 Example Usage (Laravel + Blade)
+---
 
-Below is a full example using Laravel and LiveBlade.
+## Example Usage
 
-## Controller
+### Controller
+
 ```php
-// TaskController.php
 public function index(Request $request)
 {
     if ($request->ajax()) {
+
         $tasks = Task::query()
-            ->when($request->filled('search'), fn ($q) =>
+            ->when($request->search, fn($q) =>
                 $q->where('subject', 'like', '%' . $request->search . '%'))
             ->orderBy($request->get('sort', 'id'), $request->get('dir', 'desc'))
             ->paginate(10);
@@ -71,16 +69,18 @@ public function index(Request $request)
     return view('tasks.index');
 }
 ```
-## Main View / Index
+
+### Main View
+
 ```blade
-// Blade View (tasks/index.blade.php)
-<div data-lb="html" data-lb-fetch="/tasks" id="tasksTable">
-    {{-- this will be replaced dynamically --}}
+<div id="tasksTable"
+     data-lb="html"
+     data-lb-fetch="{{ route('tasks.index') }}">
 </div>
 ```
 
-## Partial View
-// Blade View Partial (tasks/_table.blade.php)
+### Partial View
+
 ```blade
 <table class="table table-bordered">
     <thead>
@@ -90,7 +90,7 @@ public function index(Request $request)
         </tr>
     </thead>
     <tbody>
-        @foreach($tasks as $task)
+        @foreach ($tasks as $task)
             <tr>
                 <td>{{ $task->id }}</td>
                 <td>{{ $task->subject }}</td>
@@ -105,3 +105,85 @@ public function index(Request $request)
 </div>
 @endif
 ```
+
+---
+
+## UI Controls
+
+Search:
+
+```blade
+<input type="text" name="search" data-lb="search">
+```
+
+Select filter:
+
+```blade
+<select name="status" data-lb="select">
+    <option value="">All</option>
+    <option value="open">Open</option>
+</select>
+```
+
+Toggle POST:
+
+```blade
+<input type="checkbox"
+       data-lb="checkbox"
+       data-lb-fetch="/tasks/{{ $task->id }}/toggle"
+       data-lb-method="POST">
+```
+
+Auto updating KPI:
+
+```blade
+<span data-lb="data"
+      data-lb-fetch="/api/tasks/count"
+      data-lb-interval="15"></span>
+```
+
+---
+
+## How it Works (Junior Friendly)
+
+| Action | Who handles it | Result |
+|--------|----------------|--------|
+| Search/sort/filter | JS | Sends AJAX request |
+| Fetch controller | Laravel | Returns HTML + pagination data |
+| Insert into DOM | LiveBlade | UI updates instantly |
+| URL sync | Browser | Back button works |
+
+Backend remains the single source of truth.
+
+---
+
+## Roadmap
+
+| Feature | Status |
+|--------|:------:|
+| CDN + NPM release | Soon |
+| Form post support | Soon |
+| Incremental DOM diffing | Planned |
+| Alpine.js helpers | Planned |
+| WebSockets | Future |
+
+PRs welcome.
+
+---
+
+## License
+
+MIT License.
+
+---
+
+## Contribute
+
+If you use LiveBlade:
+- Star the repo ⭐
+- Suggest improvements
+- Submit PRs
+
+---
+
+Dynamic UI. 100% Blade. Zero dependencies.
