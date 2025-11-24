@@ -70,3 +70,9 @@ public function index(Request $request)
 
     return view('tasks.index');
 }
+
+
+// Blade View (tasks/index.blade.php)
+<div data-lb="html" data-lb-fetch="{{ route('tasks.index') }}" id="tasksTable">
+    {{-- this will be replaced dynamically --}}
+</div>
