@@ -4,8 +4,9 @@ namespace App\Http\Controllers\Test;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+
 use App\Task;
-use App\User;
+use App\Helpers\MinifyHtml;
 
 class TestTaskController extends Controller
 {
@@ -23,14 +24,17 @@ class TestTaskController extends Controller
             $tasks = Task::paginate(10);
 
             return response()->json([
-                'html' => view('liveblade.partials.table', compact('tasks'))->render(),
+                'success' => true,
+                'message' => 'Data loaded successfully',
+                'html' => MinifyHtml::minify(
+                    view('liveblade.partials.table')
+                        ->with('tasks', $tasks)
+                        ->render()
+                ),
                 'has_more' => $tasks->hasMorePages(),
             ]);
         }
-
-        return view('liveblade.tasks');
     }
-
 
     public function counts(Request $request)
     {
