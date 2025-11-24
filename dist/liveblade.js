@@ -14,7 +14,7 @@
     }
 
     const LiveBlade = {
-        version: "1.1.0",
+        version: "1.0.0",
         controllers: new WeakMap(),
         instances: new Set(),
         debounceDelay: 300,
