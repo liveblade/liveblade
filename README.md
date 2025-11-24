@@ -50,7 +50,6 @@ Include LiveBlade wherever you load Blade templates:
 Below is a full example using Laravel and LiveBlade.
 
 ## Controller
-
 ```php
 // TaskController.php
 public function index(Request $request)
@@ -70,10 +69,11 @@ public function index(Request $request)
 
     return view('tasks.index');
 }
+```
 
 ```blade
 // Blade View (tasks/index.blade.php)
-<div data-lb="html" data-lb-fetch="{{ route('tasks.index') }}" id="tasksTable">
+<div data-lb="html" data-lb-fetch="/tasks" id="tasksTable">
     {{-- this will be replaced dynamically --}}
 </div>
 ```
