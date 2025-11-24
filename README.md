@@ -43,3 +43,30 @@ Include LiveBlade wherever you load Blade templates:
 ```html
 <script src="/js/liveblade.js"></script>
 <link rel="stylesheet" href="/css/liveblade.css">
+
+
+## 🔧 Example Usage (Laravel + Blade)
+
+Below is a full example using Laravel and LiveBlade.
+
+### Controller
+
+```php
+// TaskController.php
+public function index(Request $request)
+{
+    if ($request->ajax()) {
+        $tasks = Task::query()
+            ->when($request->filled('search'), fn ($q) =>
+                $q->where('subject', 'like', '%' . $request->search . '%'))
+            ->orderBy($request->get('sort', 'id'), $request->get('dir', 'desc'))
+            ->paginate(10);
+
+        return response()->json([
+            'html' => view('tasks._table', compact('tasks'))->render(),
+            'has_more' => $tasks->hasMorePages(),
+        ]);
+    }
+
+    return view('tasks.index');
+}
