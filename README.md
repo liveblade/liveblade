@@ -71,8 +71,35 @@ public function index(Request $request)
     return view('tasks.index');
 }
 
-
+```blade
 // Blade View (tasks/index.blade.php)
 <div data-lb="html" data-lb-fetch="{{ route('tasks.index') }}" id="tasksTable">
     {{-- this will be replaced dynamically --}}
 </div>
+```
+
+lade Partial (tasks/_table.blade.php)
+```blade
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th data-lb-sort="id">#</th>
+            <th data-lb-sort="subject">Subject</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach($tasks as $task)
+            <tr>
+                <td>{{ $task->id }}</td>
+                <td>{{ $task->subject }}</td>
+            </tr>
+        @endforeach
+    </tbody>
+</table>
+
+@if ($tasks->hasPages())
+<div data-lb="pagination">
+    {!! $tasks->withQueryString()->links() !!}
+</div>
+@endif
+```
