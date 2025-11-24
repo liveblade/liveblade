@@ -108,28 +108,45 @@ public function index(Request $request)
 ### Partial View
 
 ```blade
-<table class="table table-bordered">
+<table class="table table-striped">
     <thead>
         <tr>
-            <th data-lb-sort="id">#</th>
-            <th data-lb-sort="subject">Subject</th>
+            <th data-lb-sort="id">ID</th>
+            <th data-lb-sort="title">Title</th>
+            <th data-lb-sort="status">Status</th>
+            <th data-lb-sort="created_at">Created</th>
+            <th>Done?</th>
         </tr>
     </thead>
     <tbody>
-        @foreach ($tasks as $task)
-            <tr>
-                <td>{{ $task->id }}</td>
-                <td>{{ $task->subject }}</td>
-            </tr>
+        @foreach($tasks as $task)
+        <tr>
+            <td>{{ $task->id }}</td>
+            <td>{{ $task->title }}</td>
+            <td>{{ $task->status }}</td>
+            <td>{{ $task->created_at->format('d.m.Y') }}</td>
+            <td>
+                <input type="checkbox"
+                       data-lb="checkbox"
+                       data-lb-fetch="{{ route('tasks.toggle', $task->id) }}"
+                       data-lb-method="POST"
+                       name="done"
+                       {{ $task->done ? 'checked' : '' }}>
+            </td>
+        </tr>
         @endforeach
     </tbody>
 </table>
 
-@if ($tasks->hasPages())
+@if($tasks->hasPages())
 <div data-lb="pagination">
     {!! $tasks->withQueryString()->links() !!}
 </div>
 @endif
+
+<button data-lb="button" data-lb-action="load-more" class="btn btn-primary mt-3">
+    Load More
+</button>
 ```
 
 ---
