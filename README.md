@@ -43,6 +43,7 @@ Include LiveBlade wherever you load Blade templates:
 ```html
 <script src="/js/liveblade.js"></script>
 <link rel="stylesheet" href="/css/liveblade.css">
+```
 
 
 ## 🔧 Example Usage (Laravel + Blade)
