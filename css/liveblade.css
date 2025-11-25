@@ -1,64 +1,514 @@
-.lb-loading {
-    opacity: 0.4;
-    transition: opacity 0.15s linear;
-}
+/*!
+ * LiveBlade v1.0.0 Styles
+ * Production-ready CSS for all components
+ * 
+ * Usage:
+ *   <link rel="stylesheet" href="https://cdn.liveblade.dev/v1/liveblade.min.css">
+ */
 
-/* LiveBlade Sorting Icons  */
-.lb-sortable {
+/* ============================================================
+ * LOADING STATES
+ * ========================================================== */
+
+ .lb-loading {
+    opacity: 0.6;
+    pointer-events: none;
     position: relative;
+}
+
+.lb-loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 24px;
+    height: 24px;
+    margin: -12px 0 0 -12px;
+    border: 3px solid rgba(59, 130, 246, 0.2);
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: lb-spin 0.8s linear infinite;
+    z-index: 1000;
+}
+
+@keyframes lb-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ============================================================
+ * SKELETON PLACEHOLDERS
+ * ========================================================== */
+
+.lb-skeleton {
+    padding: 1.5rem;
+    animation: lb-pulse 1.5s ease-in-out infinite;
+}
+
+.lb-skeleton-line {
+    height: 1rem;
+    background: linear-gradient(
+        90deg,
+        #f3f4f6 0%,
+        #e5e7eb 50%,
+        #f3f4f6 100%
+    );
+    background-size: 200% 100%;
+    border-radius: 0.25rem;
+    margin-bottom: 0.75rem;
+    animation: lb-shimmer 2s infinite;
+}
+
+.lb-skeleton-line:last-child {
+    margin-bottom: 0;
+}
+
+@keyframes lb-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+@keyframes lb-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* ============================================================
+ * ERROR STATES
+ * ========================================================== */
+
+.lb-error {
+    padding: 1.5rem;
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 0.5rem;
+    color: #991b1b;
+    text-align: center;
+}
+
+.lb-error strong {
+    display: block;
+    font-size: 1.125rem;
+    margin-bottom: 0.5rem;
+}
+
+.lb-error p {
+    margin: 0.5rem 0;
+    color: #dc2626;
+}
+
+.lb-retry-btn {
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+    background-color: #dc2626;
+    color: white;
+    border: none;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.lb-retry-btn:hover {
+    background-color: #b91c1c;
+}
+
+.lb-retry-btn:focus {
+    outline: 2px solid #dc2626;
+    outline-offset: 2px;
+}
+
+/* ============================================================
+ * CHECKBOX/TOGGLE FEEDBACK
+ * ========================================================== */
+
+.lb-updating {
+    opacity: 0.5;
+    pointer-events: none;
+    position: relative;
+}
+
+.lb-updating::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    margin: -8px 0 0 -8px;
+    border: 2px solid rgba(59, 130, 246, 0.2);
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: lb-spin 0.6s linear infinite;
+}
+
+.lb-success {
+    background-color: #d1fae5 !important;
+    transition: background-color 0.3s ease-out;
+}
+
+.lb-error {
+    background-color: #fee2e2 !important;
+    transition: background-color 0.3s ease-out;
+}
+
+/* Success checkmark animation */
+@keyframes lb-check {
+    0% {
+        transform: scale(0) rotate(45deg);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.2) rotate(45deg);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1) rotate(45deg);
+        opacity: 1;
+    }
+}
+
+/* ============================================================
+ * SORTABLE TABLE HEADERS
+ * ========================================================== */
+
+th[data-lb-sort] {
+    cursor: pointer;
     user-select: none;
+    transition: background-color 0.2s;
+    position: relative;
+    padding-right: 2rem !important;
 }
 
-.lb-sortable:hover {
-    color: #0d6efd;
+th[data-lb-sort]:hover {
+    background-color: #f9fafb;
 }
 
-.lb-sort-icon {
-    font-size: 0.65rem;
-    margin-left: 4px;
+th[data-lb-sort]:active {
+    background-color: #f3f4f6;
+}
+
+th[data-lb-sort]:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: -2px;
+}
+
+/* Sort indicator icons */
+th[data-lb-sort]::after {
+    content: "⇅";
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.3;
+    font-size: 0.875rem;
+    transition: opacity 0.2s;
+}
+
+th[data-lb-sort]:hover::after {
     opacity: 0.6;
 }
 
-.lb-sort-icon-active {
+th[data-lb-sort][aria-sort="ascending"]::after {
+    content: "↑";
     opacity: 1;
+    color: #3b82f6;
     font-weight: bold;
 }
 
-.placeholder {
-    display: inline-block;
-    height: 12px;
-    border-radius: 4px;
-    background: #e0e0e0;
-    width: 100%;
+th[data-lb-sort][aria-sort="descending"]::after {
+    content: "↓";
+    opacity: 1;
+    color: #3b82f6;
+    font-weight: bold;
 }
 
-.placeholder-glow .placeholder {
+/* ============================================================
+ * FORM FEEDBACK
+ * ========================================================== */
+
+form[data-lb='form'] .lb-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+form[data-lb='form'] [type='submit']:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+[data-lb-errors] .alert {
+    margin-top: 1rem;
+    margin-bottom: 0;
+}
+
+[data-lb-errors] .alert ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+[data-lb-errors] .alert li {
+    margin: 0.25rem 0;
+}
+
+.lb-success-msg {
+    animation: lb-slide-down 0.3s ease-out;
+}
+
+@keyframes lb-slide-down {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ============================================================
+ * BUTTONS
+ * ========================================================== */
+
+button[data-lb='button'],
+a[data-lb='button'] {
     position: relative;
-    overflow: hidden;
+    transition: all 0.2s;
 }
 
-.placeholder-glow .placeholder::after {
-    content: "";
+button[data-lb='button']:disabled,
+a[data-lb='button']:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+button[data-lb='button']:focus,
+a[data-lb='button']:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+/* ============================================================
+ * NAV/TABS
+ * ========================================================== */
+
+[data-lb='nav'] {
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+[data-lb='nav']:hover {
+    opacity: 0.8;
+}
+
+[data-lb='nav']:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+/* ============================================================
+ * SEARCH INPUTS
+ * ========================================================== */
+
+[data-lb='search'] {
+    transition: border-color 0.2s;
+}
+
+[data-lb='search']:focus {
+    border-color: #3b82f6;
+    outline: 2px solid rgba(59, 130, 246, 0.2);
+    outline-offset: 0;
+}
+
+/* Search loading indicator */
+[data-lb='search'].lb-searching {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='10' opacity='0.25'/%3E%3Cpath d='M12 2 A10 10 0 0 1 22 12' opacity='1'%3E%3CanimateTransform attributeName='transform' type='rotate' from='0 12 12' to='360 12 12' dur='1s' repeatCount='indefinite'/%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    background-size: 20px;
+    padding-right: 2.5rem;
+}
+
+/* ============================================================
+ * PAGINATION
+ * ========================================================== */
+
+[data-lb='pagination'] a {
+    transition: all 0.2s;
+}
+
+[data-lb='pagination'] a:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+/* ============================================================
+ * ACCESSIBILITY
+ * ========================================================== */
+
+.lb-sr-only {
     position: absolute;
-    top: 0;
-    left: -150px;
-    width: 100px;
-    height: 100%;
-    background: linear-gradient(
-        90deg,
-        rgba(255, 255, 255, 0) 0,
-        rgba(255, 255, 255, 0.6) 50%,
-        rgba(255, 255, 255, 0) 100%
-    );
-    animation: placeholder-glow 1.4s infinite;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
 }
 
-@keyframes placeholder-glow {
-    0% {
-        left: -150px;
+*:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .lb-skeleton-line {
+        background: #000;
+    }
+    
+    th[data-lb-sort]:hover {
+        background-color: #efefef;
+        color: #fff;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ============================================================
+ * DARK MODE SUPPORT
+ * ========================================================== */
+
+@media (prefers-color-scheme: dark) {
+    .lb-skeleton-line {
+        background: linear-gradient(
+            90deg,
+            #374151 0%,
+            #4b5563 50%,
+            #374151 100%
+        );
     }
 
-    100% {
-        left: 100%;
+    .lb-error {
+        background-color: #ffd5d5;
+        border-color: #991b1b;
+        color: #991b1b;
+    }
+
+    .lb-error p {
+        color: #fca5a5;
+    }
+
+    .lb-retry-btn {
+        background-color: #b91c1c;
+    }
+
+    .lb-retry-btn:hover {
+        background-color: #991b1b;
+    }
+
+    th[data-lb-sort]:hover {
+        background-color: #f1f1f1 ;
+    }
+
+    th[data-lb-sort]:active {
+        background-color: #f1f1f1;
+    }
+
+    .lb-success {
+        background-color: #064e3b !important;
+    }
+
+    .lb-error {
+        background-color: #7f1d1d !important;
+    }
+
+    .lb-loading::after {
+        border-color: rgba(96, 165, 250, 0.2);
+        border-top-color: #60a5fa;
+    }
+}
+
+/* ============================================================
+ * UTILITIES
+ * ========================================================== */
+
+.lb-fade-in {
+    animation: lb-fade-in 0.3s ease-out;
+}
+
+@keyframes lb-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.lb-slide-in {
+    animation: lb-slide-in 0.3s ease-out;
+}
+
+@keyframes lb-slide-in {
+    from {
+        opacity: 0;
+        transform: translateY(1rem);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ============================================================
+ * RESPONSIVE
+ * ========================================================== */
+
+@media (max-width: 640px) {
+    .lb-skeleton {
+        padding: 1rem;
+    }
+
+    .lb-error {
+        padding: 1rem;
+        font-size: 0.875rem;
+    }
+
+    .lb-retry-btn {
+        width: 100%;
+        padding: 0.75rem 1rem;
+    }
+
+    th[data-lb-sort] {
+        font-size: 0.875rem;
+        padding-right: 1.5rem !important;
+    }
+
+    th[data-lb-sort]::after {
+        font-size: 0.75rem;
+        right: 0.25rem;
+    }
+}
+
+/* ============================================================
+ * PRINT STYLES
+ * ========================================================== */
+
+@media print {
+    .lb-loading::after,
+    .lb-skeleton,
+    .lb-error,
+    [data-lb='button'],
+    [data-lb='search'],
+    [data-lb='pagination'] {
+        display: none !important;
     }
 }
