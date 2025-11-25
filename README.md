@@ -581,16 +581,12 @@ Close modal after form submission.
         </div>
 
         <div class="card-body p-0">
-            <div class="table-responsive" 
-                 data-lb="/tasks?status=completed" 
+            
+            <div class=""
+                data-lb="/tasks?status=completed" 
                  data-lb-interval="190"   <!-- ← 190 seconds -->
-                 id="tasksTable">
-                <div class="placeholder-glow p-4">
-                    <div class="placeholder w-100 mb-2"></div>
-                    <div class="placeholder w-75 mb-2"></div>
-                    <div class="placeholder w-50"></div>
-                </div>
-            </div>
+                 id="tasksTable"></div>
+
         </div>
     </div>
 </div>
