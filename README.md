@@ -464,17 +464,17 @@ Close modal after form submission.
     <div class="row my-3">
         <div class="col-md-4 text-center">
             <div class="card"><div class="card-body">
-                <h1 data-lb-data data-lb-fetch="/test/liveblade/counts?status=not-started" data-lb-interval="100">0</h1>
+                <h1 data-lb-data data-lb-fetch="/tasks/counts?status=not-started" data-lb-interval="100">0</h1>
             </div></div>
         </div>
         <div class="col-md-4 text-center">
             <div class="card"><div class="card-body">
-                <h1 data-lb-data data-lb-fetch="/test/liveblade/counts?status=in-progress" data-lb-interval="100">0</h1>
+                <h1 data-lb-data data-lb-fetch="/tasks/counts?status=in-progress" data-lb-interval="100">0</h1>
             </div></div>
         </div>
         <div class="col-md-4 text-center">
             <div class="card"><div class="card-body">
-                <h1 data-lb-data data-lb-fetch="/test/liveblade/counts?status=completed" data-lb-interval="100">0</h1>
+                <h1 data-lb-data data-lb-fetch="/tasks/counts?status=completed" data-lb-interval="100">0</h1>
             </div></div>
         </div>
     </div>
@@ -488,7 +488,7 @@ Close modal after form submission.
                     <i class="fas fa-search"></i>
                     <input class="form-control form-control-sm" 
                            data-lb-search 
-                           data-lb="/test/liveblade" 
+                           data-lb="/tasks" 
                            data-lb-target="#tasksTable"
                            name="search" 
                            placeholder="Search tasks">
@@ -497,7 +497,7 @@ Close modal after form submission.
             <div class="col-2">
                 <input class="form-control form-control-sm" 
                        data-lb-date 
-                       data-lb="/test/liveblade" 
+                       data-lb="/tasks" 
                        data-lb-target="#tasksTable"
                        name="due_date" 
                        type="date">
@@ -505,7 +505,7 @@ Close modal after form submission.
             <div class="col-2">
                 <select class="form-control form-control-sm" 
                         data-lb-select 
-                        data-lb="/test/liveblade" 
+                        data-lb="/tasks" 
                         data-lb-target="#tasksTable"
                         name="status">
                     <option value="">All Status</option>
@@ -518,7 +518,7 @@ Close modal after form submission.
             <div class="col-2">
                 <select class="form-control form-control-sm" 
                         data-lb-select 
-                        data-lb="/test/liveblade" 
+                        data-lb="/tasks" 
                         data-lb-target="#tasksTable"
                         name="priority">
                     <option value="">All Priority</option>
@@ -541,7 +541,7 @@ Close modal after form submission.
             <li class="nav-item">
                 <a class="nav-link {{ request()->get('status') == $val || ($val=='all' && !request()->get('status')) ? 'active' : '' }}"
                    data-lb-nav 
-                   data-lb="/test/liveblade?status={{ $val == 'all' ? '' : $val }}"
+                   data-lb="/tasks?status={{ $val == 'all' ? '' : $val }}"
                    data-lb-target="#tasksTable">
                     {{ $label }}
                 </a>
@@ -555,7 +555,7 @@ Close modal after form submission.
             <h5>Tasks</h5>
             <button class="btn btn-sm btn-outline-secondary" 
                     data-lb-button 
-                    data-lb="/test/liveblade" 
+                    data-lb="/tasks" 
                     data-lb-target="#tasksTable">
                 Refresh
             </button>
@@ -563,7 +563,7 @@ Close modal after form submission.
 
         <div class="card-body p-0">
             <div class="table-responsive" 
-                 data-lb="/test/liveblade?status=completed" 
+                 data-lb="/tasks?status=completed" 
                  data-lb-interval="190"   <!-- ← 190 seconds -->
                  id="tasksTable">
                 <div class="placeholder-glow p-4">
@@ -578,7 +578,7 @@ Close modal after form submission.
 @endsection
 ```
 
-### Partial View (tasks/_table.blade.php)
+### Partial View (tasks/partials.table.blade.php)
 
 ```blade
 
@@ -610,7 +610,7 @@ Close modal after form submission.
                         <input {{ $task->completion == 100 ? "checked" : "" }} 
                                class="custom-control-input" 
                                data-lb="toggle-update"
-                               data-lb-fetch="{{ url("test/tasks/{$task->uuid}/completion") }}" 
+                               data-lb-fetch="{{ url("tasks/{$task->uuid}/completion") }}" 
                                data-lb-method="POST" 
                                data-lb-target="#tasksTable"
                                id="completion_{{ $task->id }}" 
@@ -628,12 +628,11 @@ Close modal after form submission.
                             <i class="fas fa-ellipsis-h"></i>
                         </a>
                         <div class="dropdown-menu dropdown-menu-right">
-                            <a class="dropdown-item edit-id" data-target="#edit-task-modal" data-toggle="modal" href="#">Edit</a>
+                            <a class="dropdown-item"  href="{{ url("tasks/{$task->uuid}") }}">Edit</a>
                             <div class="dropdown-divider"></div>
                             <a class="dropdown-item delete-id text-danger" data-target="#delete-task-modal" data-toggle="modal" href="#">Delete</a>
                         </div>
                     </div>
-                    <a class="btn btn-primary btn-sm" href="{{ url("test/liveblade/{$task->uuid}") }}">View</a>
                 </td>
             </tr>
         @empty
@@ -695,7 +694,7 @@ class TaskController extends Controller
 
         if ($request->ajax()) {
             return response()->json([
-                'html' => view('tasks._table', compact('tasks'))->render(),
+                'html' => view('tasks.partials.table', compact('tasks'))->render(),
                 'has_more' => $tasks->hasMorePages()
             ]);
         }
