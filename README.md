@@ -83,7 +83,79 @@ Every Laravel developer has felt this pain:
 @endsection
 ```
 
-### 3. Update Your Controller
+
+### 3. Create Your Partial View
+
+```blade
+<table class="table-sm table-striped table-borderless dt w-100 d-block d-md-table table-responsive table py-1">
+    <thead>
+        <tr class="bg-light">
+            <th><input type="checkbox" class="selected" name="select-all" value="1"></th>
+            <th class="pointer" data-lb-sort="id">ID</th>
+            <th class="pointer" data-lb-sort="subject">Name</th>
+            <th class="pointer" data-lb-sort="status">Status</th>
+            <th class="pointer" data-lb-sort="due_date">Due Date</th>
+            <th class="pointer" data-lb-sort="priority">Priority</th>
+            <th>Completion</th>
+        </tr>
+    </thead>
+    <tbody>
+        @forelse($tasks as $task)
+            <tr id="taskRow_{{ $task->id }}">
+                <td><input type="checkbox" class="selected" name="completed" value="1"></td>
+                <td>{{ $task->id }}</td>
+                <td>{{ $task->subject }}</td>
+                <td>{{ ucfirst($task->status) }}</td>
+                <td>{{ $task->due_date }}</td>
+                <td>{{ ucfirst($task->priority) }}</td>
+                <td>
+                    <div class="custom-control custom-switch">
+                        <input {{ $task->completion == 100 ? "checked" : "" }} 
+                               class="custom-control-input" 
+                               data-lb="toggle-update"
+                               data-lb-fetch="{{ url("test/tasks/{$task->uuid}/completion") }}" 
+                               data-lb-method="POST" 
+                               data-lb-target="#tasksTable"
+                               id="completion_{{ $task->id }}" 
+                               name="completion" 
+                               type="checkbox">
+                        <label class="custom-control-label" for="completion_{{ $task->id }}">
+                            Completed
+                        </label>
+                    </div>
+                </td>
+            </tr>
+        @empty
+            <tr>
+                <td class="text-muted py-3 text-center" colspan="8">No tasks found.</td>
+            </tr>
+        @endforelse
+    </tbody>
+</table>
+
+@if ($tasks->hasPages())
+<div class="row mx-2 mt-2">
+    <div class="col-md-6">
+        Showing {{ $tasks->firstItem() }}-{{ $tasks->lastItem() }} of {{ $tasks->total() }} tasks
+    </div>
+    <div class="col-md-6 d-flex justify-content-end">
+        <div data-lb="pagination" data-lb-target="#tasksTable">
+            {{ $tasks->withQueryString()->links() }}
+        </div>
+    </div>
+</div> 
+
+{{-- Load More Button
+<div class="row mx-2 mt-2">
+    <div class="col-md-12">
+        <button class="btn btn-primary" data-lb="button" data-lb-action="load-more" data-lb-target="#tasksTable">More…</button>
+    </div>
+</div>
+--}}
+@endif
+```
+
+### 4. Update Your Controller
 
 ```php
 public function index(Request $request)
