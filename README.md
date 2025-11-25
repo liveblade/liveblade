@@ -68,15 +68,19 @@ Every Laravel developer has felt this pain:
 ### 2. Create Your View
 
 ```blade
-<!-- Search input -->
+@extends("layouts.app")
+@section("content")
+
+<!-- Search input  example -->
 <input data-lb-search name="search" data-lb-target="#taskList">
 
-<!-- Filter tabs -->
+<!-- Filter tabs example -->
 <a data-lb-nav href="/tasks?status=open" data-lb-target="#taskList">Open</a>
 <a data-lb-nav href="/tasks?status=completed" data-lb-target="#taskList">Completed</a>
 
-<!-- Dynamic table -->
+<!-- Dynamic table example -->
 <div id="taskList" data-lb="/tasks"></div>
+@endsection
 ```
 
 ### 3. Update Your Controller
@@ -90,7 +94,7 @@ public function index(Request $request)
 
     if ($request->ajax()) {
         return response()->json([
-            'html' => view('tasks._table', compact('tasks'))->render()
+            'html' => view('tasks.partials.table', compact('tasks'))->render()
         ]);
     }
 
