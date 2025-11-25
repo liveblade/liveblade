@@ -699,9 +699,16 @@ class TaskController extends Controller
 
         if ($request->ajax()) {
             return response()->json([
-                'html' => view('tasks.partials.table', compact('tasks'))->render(),
-                'has_more' => $tasks->hasMorePages()
-            ]);
+                // Minify the HTML output to reduce the response size
+                // 'html' => $this->minify(view('tasks.partials.table', compact('tasks'))->render())
+                'html' => view('tasks.partials.table', compact('tasks'))->render(), 
+                'has_more' => $tasks->hasMorePages(),
+                'meta' => [
+                    'total' => $tasks->total(),
+                    'current_page' => $tasks->currentPage(),
+                    'per_page' => $tasks->perPage(),
+                ]                
+            ])->header('Cache-Control', 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0');
         }
 
         return view('tasks.index', compact('tasks'));
@@ -712,6 +719,25 @@ class TaskController extends Controller
         $task->update(['completed' => $request->boolean('completed')]);
         return response()->json(['success' => true]);
     }
+
+
+    // Optional minify html response to reudce the partial view size
+    private function minify($html)
+    {
+        if (empty($html)) {
+            return '';
+        }
+
+        // Remove unnecessary spaces between HTML tags
+        $html = preg_replace('/>\s+</', '><', $html);
+
+        // Remove multiple spaces and new lines
+        $html = preg_replace('/\s+/', ' ', $html);
+
+        return trim($html);
+    }
+ 
+
 }
 ```
 
