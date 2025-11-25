@@ -22,7 +22,7 @@ Every Laravel developer has felt this pain:
 <link  href="https://cdn.jsdelivr.net/gh/liveblade/liveblade@1/dist/liveblade.min.css" rel="stylesheet">
 
 
-<!-- Use in your views -->
+<!-- Use in your views to load a partial view  -->
 <div data-lb="/tasks"></div>
 
 ```
@@ -83,13 +83,12 @@ Every Laravel developer has felt this pain:
 @endsection
 ```
 
-
 ### 3. Create Your Partial View
 
 ```blade
-<table class="table-sm table-striped table-borderless dt w-100 d-block d-md-table table-responsive table py-1">
+<table class="table">
     <thead>
-        <tr class="bg-light">
+        <tr class="bg-gray-50">
             <th><input type="checkbox" class="selected" name="select-all" value="1"></th>
             <th class="pointer" data-lb-sort="id">ID</th>
             <th class="pointer" data-lb-sort="subject">Name</th>
@@ -134,7 +133,7 @@ Every Laravel developer has felt this pain:
 </table>
 
 @if ($tasks->hasPages())
-<div class="row mx-2 mt-2">
+<div class="row">
     <div class="col-md-6">
         Showing {{ $tasks->firstItem() }}-{{ $tasks->lastItem() }} of {{ $tasks->total() }} tasks
     </div>
@@ -146,7 +145,7 @@ Every Laravel developer has felt this pain:
 </div> 
 
 {{-- Load More Button
-<div class="row mx-2 mt-2">
+<div class="row">
     <div class="col-md-12">
         <button class="btn btn-primary" data-lb="button" data-lb-action="load-more" data-lb-target="#tasksTable">More…</button>
     </div>
@@ -166,8 +165,14 @@ public function index(Request $request)
 
     if ($request->ajax()) {
         return response()->json([
-            'html' => view('tasks.partials.table', compact('tasks'))->render()
-        ]);
+            'html' => view('tasks.partials.table')->with('tasks', $tasks )->render(),
+            'has_more' => $tasks->hasMorePages(),
+            'meta' => [
+                'total' => $tasks->total(),
+                'current_page' => $tasks->currentPage(),
+                'per_page' => $tasks->perPage(),
+            ]            
+        ])->header('Cache-Control', 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0');
     }
 
     return view('tasks.index', compact('tasks'));
