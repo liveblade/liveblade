@@ -292,6 +292,10 @@ AJAX pagination with Laravel's `links()`.
 <div data-lb-pagination data-lb-target="#taskList">
     {{ $tasks->withQueryString()->links() }}
 </div>
+
+<!-- Load More Button-->
+<button class="btn btn-primary" data-lb="button" data-lb-action="load-more" data-lb-target="#tasksTable">More…</button>
+
 ```
 
 **Important:** Always use `withQueryString()` to preserve filters!
@@ -303,7 +307,7 @@ POST requests on checkbox change.
 ```blade
 <!-- Long form -->
 <input type="checkbox" 
-       data-lb="checkbox"
+       data-lb="toggle-update"
        data-lb-fetch="/tasks/{{ $task->id }}/complete"
        data-lb-target="#taskList"
        name="completed"
@@ -311,7 +315,7 @@ POST requests on checkbox change.
 
 <!-- Shorthand -->
 <input type="checkbox" 
-       data-lb-checkbox
+       data-lb-toggle-update
        data-lb-fetch="/tasks/{{ $task->id }}/complete"
        data-lb-target="#taskList"
        name="completed">
