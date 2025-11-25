@@ -319,6 +319,7 @@ POST requests on checkbox change.
        data-lb="toggle-update"
        data-lb-fetch="/tasks/{{ $task->id }}/complete"
        data-lb-target="#taskList"
+       data-lb-method="POST"
        name="completed"
        {{ $task->completed ? 'checked' : '' }}>
 
