@@ -18,7 +18,7 @@ Every Laravel developer has felt this pain:
 
 ```blade
 <!-- Add to your layout -->
-<script src="https://cdn.jsdelivr.net/npm/liveblade@1/dist/liveblade.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/liveblade/liveblade@v1.0.0/dist/liveblade.min.js"></script>
 
 <!-- Use in your views -->
 <div data-lb="/tasks"></div>
@@ -51,12 +51,12 @@ Every Laravel developer has felt this pain:
 <html>
 <head>
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link href="https://cdn.jsdelivr.net/npm/liveblade@1/dist/liveblade.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/gh/liveblade/liveblade@v1.0.0/dist/liveblade.min.css" rel="stylesheet">
 </head>
 <body>
     @yield('content')
     
-    <script src="https://cdn.jsdelivr.net/npm/liveblade@1/dist/liveblade.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/liveblade/liveblade@v1.0.0/dist/liveblade.min.js"></script>
 </body>
 </html>
 ```
