@@ -24,7 +24,7 @@ Every Laravel developer has felt this pain:
 
 <!-- Use in your views -->
 <div data-lb="/tasks"></div>
-<input data-lb-search name="search" data-lb-target="#tasks">
+
 ```
 
 **No installation. No packages. No webpack. Just works.**
