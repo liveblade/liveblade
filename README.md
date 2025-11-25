@@ -827,7 +827,7 @@ document.getElementById('taskList').addEventListener('lb:error', function(e) {
 
 | Feature | LiveBlade | Livewire | HTMX | Alpine AJAX | React/Vue |
 |---------|-----------|----------|------|-------------|-----------|
-| Size | 5KB | 60KB | 13KB | 3KB | 40KB+ |
+| Size | 0.2 kB | 60KB | 13KB | 3KB | 40KB+ |
 | Dependencies | 0 | 0 | 0 | Alpine.js | Many |
 | Laravel-First | ✅ | ✅ | ❌ | ❌ | ❌ |
 | No Backend Changes | ✅ | ❌ | ✅ | ✅ | ❌ |
