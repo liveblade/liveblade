@@ -1,10 +1,18 @@
 /*!
  * LiveBlade v1.0.0
+ * @author: LiveBlade
+ * @version: 1.0.0
+ * @license: MIT
+ * @docs: https://liveblade.dev
+ * @github: https://github.com/liveblade/liveblade
  * Production-ready AJAX for Laravel Blade
- *
+ * LiveBlade is a lightweight, server-driven reactivity framework for Laravel Blade that enables AJAX-powered interactions without the need for complex JavaScript frameworks like React or Vue. 
+ * It allows you to easily add dynamic features like live search, real-time tables, and AJAX pagination to your Laravel app, with zero dependencies and minimal setup
+ * 
  * @usage:
- *   <script src="https://cdn.liveblade.dev/v1/liveblade.min.js"></script>
- *   <link href="https://cdn.liveblade.dev/v1/liveblade.min.css" rel="stylesheet">
+ *   
+ * <script src="https://cdn.jsdelivr.net/gh/liveblade/liveblade@1/dist/liveblade.min.js"></script>
+ * <link  href="https://cdn.jsdelivr.net/gh/liveblade/liveblade@1/dist/liveblade.min.css" rel="stylesheet">
  *
  * @license MIT
  * @docs https://liveblade.dev
