@@ -7,7 +7,9 @@
 /* ============================================================
  * LOADING - Simple white overlay with spinner
  * ========================================================== */
-
+:root{
+    --lb-loading-background: rgba(255, 255, 255, 0.5);
+}
  .lb-loading {
     position: relative;
     pointer-events: none;
@@ -161,7 +163,7 @@ th[data-lb-sort][aria-sort="descending"]::after {
 
 @media (prefers-color-scheme: dark) {
     .lb-loading::before {
-        background: rgba(182, 225, 255, 0.095);
+        background: rgba(255, 255, 255, 0.5);
     }
 
     .lb-loading::after {
