@@ -284,9 +284,18 @@ AJAX pagination with Laravel's `links()`.
 
 ```blade
 <!-- Long form -->
-<div data-lb="pagination" data-lb-target="#taskList">
-    {{ $tasks->withQueryString()->links() }}
-</div>
+@if ($tasks->hasPages())
+<div class="row">
+    <div class="col-md-6">
+        Showing {{ $tasks->firstItem() }}-{{ $tasks->lastItem() }} of {{ $tasks->total() }} tasks
+    </div>
+    <div class="col-md-6 d-flex justify-content-end">
+        <div data-lb="pagination" data-lb-target="#tasksTable">
+            {{ $tasks->withQueryString()->links() }}
+        </div>
+    </div>
+</div> 
+@endif
 
 <!-- Shorthand -->
 <div data-lb-pagination data-lb-target="#taskList">
