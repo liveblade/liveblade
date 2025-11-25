@@ -3,8 +3,8 @@
 **Server-driven reactivity for Laravel Blade. No page reloads. No React. No Vue. Just works.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/yourusername/liveblade)
-[![Size](https://img.shields.io/badge/size-5KB-green.svg)](https://github.com/yourusername/liveblade)
+[![Version](https://img.shields.io/github/v/tag/liveblade/liveblade?label=version)](https://github.com/liveblade/liveblade)
+[![Size](https://img.shields.io/badge/size-5KB-green.svg)](https://github.com/liveblade/liveblade)
 
 ---
 
@@ -18,7 +18,9 @@ Every Laravel developer has felt this pain:
 
 ```blade
 <!-- Add to your layout -->
-<script src="https://cdn.jsdelivr.net/gh/liveblade/liveblade@v1.0.0/dist/liveblade.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/liveblade/liveblade@1.0.0/dist/liveblade.min.js"></script>
+<link  href="https://cdn.jsdelivr.net/gh/liveblade/liveblade@1.0.0/dist/liveblade.min.css" rel="stylesheet">
+
 
 <!-- Use in your views -->
 <div data-lb="/tasks"></div>
@@ -51,12 +53,12 @@ Every Laravel developer has felt this pain:
 <html>
 <head>
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link href="https://cdn.jsdelivr.net/gh/liveblade/liveblade@v1.0.0/dist/liveblade.min.css" rel="stylesheet">
+    <link href="https://raw.githubusercontent.com/liveblade/liveblade/1.0.0/dist/liveblade.min.css" rel="stylesheet">
 </head>
 <body>
     @yield('content')
     
-    <script src="https://cdn.jsdelivr.net/gh/liveblade/liveblade@v1.0.0/dist/liveblade.min.js"></script>
+    <script src="https://raw.githubusercontent.com/liveblade/liveblade/1.0.0/dist/liveblade.min.js"></script>
 </body>
 </html>
 ```
@@ -805,9 +807,9 @@ Contributions welcome! Please:
 
 ## Support
 
-- **GitHub Issues:** [Report bugs](https://github.com/yourusername/liveblade/issues)
-- **Discussions:** [Ask questions](https://github.com/yourusername/liveblade/discussions)
-- **Twitter:** [@yourusername](https://twitter.com/yourusername)
+- **GitHub Issues:** [Report bugs](https://github.com/liveblade/liveblade/issues)
+- **Discussions:** [Ask questions](https://github.com/liveblade/liveblade/discussions)
+
 
 ---
 
