@@ -379,92 +379,121 @@ Close modal after form submission.
 
 @section('content')
 <div class="container">
-    
-    <!-- KPI Cards (auto-refresh every 60s) -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h6 class="text-muted">OPEN</h6>
-                    <h1 data-lb-data 
-                        data-lb-fetch="/tasks/count/open"
-                        data-lb-interval="60">0</h1>
-                </div>
-            </div>
+
+    <!-- KPIs — Fixed interval -->
+    <div class="row my-3">
+        <div class="col-md-4 text-center">
+            <div class="card"><div class="card-body">
+                <h1 data-lb-data data-lb-fetch="/test/liveblade/counts?status=not-started" data-lb-interval="100">0</h1>
+            </div></div>
         </div>
-        <div class="col-md-3">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h6 class="text-muted">COMPLETED</h6>
-                    <h1 data-lb-data 
-                        data-lb-fetch="/tasks/count/completed"
-                        data-lb-interval="60">0</h1>
-                </div>
-            </div>
+        <div class="col-md-4 text-center">
+            <div class="card"><div class="card-body">
+                <h1 data-lb-data data-lb-fetch="/test/liveblade/counts?status=in-progress" data-lb-interval="100">0</h1>
+            </div></div>
+        </div>
+        <div class="col-md-4 text-center">
+            <div class="card"><div class="card-body">
+                <h1 data-lb-data data-lb-fetch="/test/liveblade/counts?status=completed" data-lb-interval="100">0</h1>
+            </div></div>
         </div>
     </div>
+    <hr>
 
-    <!-- Filters -->
-    <div class="row mb-3">
-        <div class="col-md-3">
-            <input data-lb-search 
-                   data-lb-target="#taskList" 
-                   name="search"
-                   placeholder="Search..."
-                   class="form-control">
+    <!-- QUICK FILTERS — Using magical shorthand -->
+    <div class="card"><div class="card-body p-1">
+        <div class="row">
+            <div class="col-6">
+                <div class="custom-search-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input class="form-control form-control-sm" 
+                           data-lb-search 
+                           data-lb="/test/liveblade" 
+                           data-lb-target="#tasksTable"
+                           name="search" 
+                           placeholder="Search tasks">
+                </div>
+            </div>
+            <div class="col-2">
+                <input class="form-control form-control-sm" 
+                       data-lb-date 
+                       data-lb="/test/liveblade" 
+                       data-lb-target="#tasksTable"
+                       name="due_date" 
+                       type="date">
+            </div>
+            <div class="col-2">
+                <select class="form-control form-control-sm" 
+                        data-lb-select 
+                        data-lb="/test/liveblade" 
+                        data-lb-target="#tasksTable"
+                        name="status">
+                    <option value="">All Status</option>
+                    <option value="not-started">Not Started</option>
+                    <option value="in-progress">In Progress</option>
+                    <option value="waiting">Waiting</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
+            <div class="col-2">
+                <select class="form-control form-control-sm" 
+                        data-lb-select 
+                        data-lb="/test/liveblade" 
+                        data-lb-target="#tasksTable"
+                        name="priority">
+                    <option value="">All Priority</option>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                </select>
+            </div>
         </div>
-        <div class="col-md-3">
-            <select data-lb-select 
-                    data-lb-target="#taskList" 
-                    name="status"
-                    class="form-control">
-                <option value="">All Status</option>
-                <option value="open">Open</option>
-                <option value="completed">Completed</option>
-            </select>
-        </div>
-        <div class="col-md-3">
-            <input data-lb-date 
-                   data-lb-target="#taskList" 
-                   name="due_date"
-                   type="date"
-                   class="form-control">
-        </div>
-        <div class="col-md-3">
-            <button data-lb-button 
-                    data-lb-action="refresh" 
-                    data-lb-target="#taskList"
-                    class="btn btn-secondary">
+    </div></div>
+
+    <!-- NAVIGATION TABS — Magical + active class handled automatically -->
+    <ul class="nav nav-tabs modern-tabs mb-3">
+        @foreach ([
+            "all" => "All",
+            "not-started" => "New",
+            "in-progress" => "In Progress",
+            "completed" => "Completed",
+        ] as $val => $label)
+            <li class="nav-item">
+                <a class="nav-link {{ request()->get('status') == $val || ($val=='all' && !request()->get('status')) ? 'active' : '' }}"
+                   data-lb-nav 
+                   data-lb="/test/liveblade?status={{ $val == 'all' ? '' : $val }}"
+                   data-lb-target="#tasksTable">
+                    {{ $label }}
+                </a>
+            </li>
+        @endforeach
+    </ul>
+
+    <!-- MAIN TABLE — Fixed interval + magical shorthand -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5>Tasks</h5>
+            <button class="btn btn-sm btn-outline-secondary" 
+                    data-lb-button 
+                    data-lb="/test/liveblade" 
+                    data-lb-target="#tasksTable">
                 Refresh
             </button>
         </div>
-    </div>
 
-    <!-- Navigation Tabs -->
-    <ul class="nav nav-tabs mb-3">
-        <li class="nav-item">
-            <a class="nav-link active" 
-               data-lb-nav 
-               data-lb-target="#taskList" 
-               href="/tasks?view=all">All</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" 
-               data-lb-nav 
-               data-lb-target="#taskList" 
-               href="/tasks?view=my-tasks">My Tasks</a>
-        </li>
-    </ul>
-
-    <!-- Dynamic Table (auto-refreshes every 90s) -->
-    <div id="taskList" 
-         data-lb="/tasks"
-         data-lb-interval="90">
-        <div class="text-center p-5">
-            <div class="spinner-border"></div>
+        <div class="card-body p-0">
+            <div class="table-responsive" 
+                 data-lb="/test/liveblade?status=completed" 
+                 data-lb-interval="190"   <!-- ← 190 seconds -->
+                 id="tasksTable">
+                <div class="placeholder-glow p-4">
+                    <div class="placeholder w-100 mb-2"></div>
+                    <div class="placeholder w-75 mb-2"></div>
+                    <div class="placeholder w-50"></div>
+                </div>
+            </div>
         </div>
     </div>
-
 </div>
 @endsection
 ```
@@ -472,47 +501,88 @@ Close modal after form submission.
 ### Partial View (tasks/_table.blade.php)
 
 ```blade
-<table class="table table-hover">
+
+<table class="table-sm table-striped table-borderless dt w-100 d-block d-md-table table-responsive table py-1">
     <thead>
-        <tr>
-            <th data-lb-sort="id">ID</th>
-            <th data-lb-sort="name">Name</th>
-            <th data-lb-sort="status">Status</th>
-            <th data-lb-sort="created_at">Created</th>
-            <th>Actions</th>
+        <tr class="bg-light">
+            <th><input type="checkbox" class="selected" name="select-all" value="1"></th>
+            <th class="pointer" data-lb-sort="id">ID</th>
+            <th class="pointer" data-lb-sort="subject">Name</th>
+            <th class="pointer" data-lb-sort="status">Status</th>
+            <th class="pointer" data-lb-sort="due_date">Due Date</th>
+            <th class="pointer" data-lb-sort="priority">Priority</th>
+            <th>Completion</th>
+            <th class="pointer" data-lb-sort="owner">Owner</th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
         @forelse($tasks as $task)
-            <tr>
+            <tr id="taskRow_{{ $task->id }}">
+                <td><input type="checkbox" class="selected" name="completed" value="1"></td>
                 <td>{{ $task->id }}</td>
-                <td>{{ $task->name }}</td>
-                <td>{{ $task->status }}</td>
-                <td>{{ $task->created_at->format('M d, Y') }}</td>
+                <td>{{ $task->subject }}</td>
+                <td>{{ ucfirst($task->status) }}</td>
+                <td>{{ $task->due_date }}</td>
+                <td>{{ ucfirst($task->priority) }}</td>
                 <td>
-                    <input type="checkbox" 
-                           data-lb-checkbox
-                           data-lb-fetch="/tasks/{{ $task->id }}/complete"
-                           data-lb-target="#taskList"
-                           name="completed"
-                           {{ $task->completed ? 'checked' : '' }}>
+                    <div class="custom-control custom-switch">
+                        <input {{ $task->completion == 100 ? "checked" : "" }} 
+                               class="custom-control-input" 
+                               data-lb="toggle-update"
+                               data-lb-fetch="{{ url("test/tasks/{$task->uuid}/completion") }}" 
+                               data-lb-method="POST" 
+                               data-lb-target="#tasksTable"
+                               id="completion_{{ $task->id }}" 
+                               name="completion" 
+                               type="checkbox">
+                        <label class="custom-control-label" for="completion_{{ $task->id }}">
+                            Completed
+                        </label>
+                    </div>
+                </td>
+                <td>{{ $task->owner ?? "N/A" }}</td>
+                <td class="d-flex justify-content-end">
+                    <div class="dropdown float-right">
+                        <a class="dropdown-toggle arrow-none card-drop" data-toggle="dropdown" href="#">
+                            <i class="fas fa-ellipsis-h"></i>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right">
+                            <a class="dropdown-item edit-id" data-target="#edit-task-modal" data-toggle="modal" href="#">Edit</a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item delete-id text-danger" data-target="#delete-task-modal" data-toggle="modal" href="#">Delete</a>
+                        </div>
+                    </div>
+                    <a class="btn btn-primary btn-sm" href="{{ url("test/liveblade/{$task->uuid}") }}">View</a>
                 </td>
             </tr>
         @empty
             <tr>
-                <td colspan="5" class="text-center">No tasks found</td>
+                <td class="text-muted py-3 text-center" colspan="8">No tasks found.</td>
             </tr>
         @endforelse
     </tbody>
 </table>
 
-@if($tasks->hasPages())
-    <div class="d-flex justify-content-between">
-        <div>{{ $tasks->total() }} tasks</div>
-        <div data-lb-pagination data-lb-target="#taskList">
+@if ($tasks->hasPages())
+<div class="row mx-2 mt-2">
+    <div class="col-md-6">
+        Showing {{ $tasks->firstItem() }}-{{ $tasks->lastItem() }} of {{ $tasks->total() }} tasks
+    </div>
+    <div class="col-md-6 d-flex justify-content-end">
+        <div data-lb="pagination" data-lb-target="#tasksTable">
             {{ $tasks->withQueryString()->links() }}
         </div>
     </div>
+</div> 
+
+{{-- Load More Button
+<div class="row mx-2 mt-2">
+    <div class="col-md-12">
+        <button class="btn btn-primary" data-lb="button" data-lb-action="load-more" data-lb-target="#tasksTable">More…</button>
+    </div>
+</div>
+--}}
 @endif
 ```
 
