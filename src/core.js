@@ -11,7 +11,7 @@
 
     if (window.LiveBlade) return;
 
-    const VERSION = "2.0.0";
+    const VERSION = "1.0.1";
     const DEBUG = localStorage.getItem("lb_debug") === "1";
 
     /**

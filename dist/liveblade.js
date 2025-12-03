@@ -1,5 +1,5 @@
 /*!
- * LiveBlade v2.0.0
+ * LiveBlade v1.0.1
  * Production-ready AJAX for Laravel Blade
  * @license MIT
  *
@@ -28,7 +28,7 @@
 
     if (window.LiveBlade) return;
 
-    const VERSION = "2.0.0";
+    const VERSION = "1.0.1";
     const DEBUG = localStorage.getItem("lb_debug") === "1";
 
     /**

@@ -1,6 +1,6 @@
 {
     "name": "liveblade",
-    "version": "2.0.0",
+    "version": "1.0.1",
     "description": "Production-ready AJAX for Laravel Blade",
     "main": "dist/liveblade.js",
     "scripts": {
