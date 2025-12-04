@@ -31,6 +31,7 @@ const files = [
     'src/features/toggle.js',
     'src/features/data.js',
     'src/features/pagination.js',
+    'src/features/quick-search.js',
 
     // Optional Features (uncomment to enable)
     // 'src/features/toast.js',
@@ -40,6 +41,10 @@ const files = [
     // 'src/features/delete.js',
     // 'src/features/bulk-actions.js',
 ];
+
+const cssfiles = [
+    'src/liveblade.css',
+]
 
 // ===========================================
 // BUILD (no need to edit below)
@@ -99,4 +104,28 @@ try {
     });
 } catch (e) {
     console.log('\n⚠ Run "npm install terser" for minification');
+}
+
+
+
+// ===========================================
+// CSS BUILD
+// ===========================================
+const cssInput = path.join(__dirname, 'src/liveblade.css');
+if (fs.existsSync(cssInput)) {
+    const css = fs.readFileSync(cssInput, 'utf8');
+    
+    // Copy to dist
+    fs.writeFileSync(path.join(distDir, 'liveblade.css'), css);
+    console.log(`\n→ dist/liveblade.css (${(css.length / 1024).toFixed(1)}KB)`);
+    
+    // Minify if clean-css available
+    try {
+        const CleanCSS = require('clean-css');
+        const minified = new CleanCSS({}).minify(css);
+        fs.writeFileSync(path.join(distDir, 'liveblade.min.css'), minified.styles);
+        console.log(`→ dist/liveblade.min.css (${(minified.styles.length / 1024).toFixed(1)}KB)`);
+    } catch (e) {
+        console.log('\n⚠ Run "npm install clean-css" for CSS minification');
+    }
 }

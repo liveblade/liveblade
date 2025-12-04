@@ -185,7 +185,7 @@ public function index(Request $request)
 
 ## Components
 
-LiveBlade provides 13 components via `data-lb` attributes:
+LiveBlade provides components via `data-lb` attributes:
 
 ### 1. HTML Container
 
@@ -467,6 +467,87 @@ Close modal after form submission.
 </form>
 ```
 
+### 14. Quick Search (Autocomplete)
+
+Typeahead search with dropdown results.
+```blade
+<!-- Basic -->
+<input data-lb-quick-search="/users/search" 
+       data-lb-target="#results"
+       placeholder="Search users...">
+<div id="results"></div>
+
+<!-- With avatar, hidden input, and options -->
+<input data-lb-quick-search="/users/search" 
+       data-lb-target="#results"
+       data-lb-template="avatar"
+       data-lb-hidden="#user_id"
+       data-lb-min="2"
+       data-lb-delay="300"
+       placeholder="Search users...">
+<input type="hidden" id="user_id" name="user_id">
+<div id="results"></div>
+```
+
+**Options:**
+
+| Attribute | Default | Description |
+|-----------|---------|-------------|
+| `data-lb-quick-search` | — | URL to fetch results (required) |
+| `data-lb-target` | — | Selector for results dropdown (required) |
+| `data-lb-template` | `default` | `default` (text only) or `avatar` (with picture) |
+| `data-lb-hidden` | — | Selector for hidden input to store selected ID |
+| `data-lb-min` | `1` | Minimum characters to trigger search |
+| `data-lb-delay` | `300` | Debounce delay in milliseconds |
+| `data-lb-param` | `q` | Query parameter name |
+| `data-lb-display` | `title` | Property to show in input after selection |
+
+**Laravel Controller:**
+```php
+public function search(Request $request)
+{
+    $users = User::where('name', 'like', "%{$request->q}%")
+        ->orWhere('email', 'like', "%{$request->q}%")
+        ->limit(10)
+        ->get();
+
+    return $users->map(fn($user) => [
+        'id' => $user->id,
+        'title' => $user->name,
+        'subtitle' => $user->email,
+        'picture' => $user->avatar_url,
+    ]);
+}
+```
+
+**JSON Response Format:**
+```json
+[
+    { "id": 1, "title": "John Doe", "subtitle": "john@example.com", "picture": "/img/john.jpg" },
+    { "id": 2, "title": "Jane Smith", "subtitle": "jane@example.com", "picture": null }
+]
+```
+
+**Features:**
+- Keyboard navigation (↑↓ arrows, Enter to select, Escape to close)
+- Shows initials when no picture provided
+- Debounced requests (won't flood your server)
+- Aborts previous request when typing
+- ARIA accessible
+
+**Events:**
+```javascript
+// Listen for selection
+document.querySelector('input').addEventListener('lb:quicksearch:select', function(e) {
+    console.log('Selected:', e.detail.item);
+    // { id: 1, title: "John Doe", subtitle: "john@example.com", picture: "..." }
+});
+```
+
+**Route:**
+```php
+Route::get('/users/search', [UserController::class, 'search']);
+```
 ---
 
 ## Complete Example
