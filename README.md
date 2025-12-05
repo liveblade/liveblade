@@ -4,7 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Version](https://img.shields.io/github/v/tag/liveblade/liveblade?label=version)](https://github.com/liveblade/liveblade)
-[![Size](https://img.shields.io/badge/size-5KB-green.svg)](https://github.com/liveblade/liveblade)
+[![Size](https://img.shields.io/badge/size-30KB-green.svg)](https://github.com/liveblade/liveblade)
 
 ---
 
@@ -33,7 +33,7 @@ Every Laravel developer has felt this pain:
 
 ## Features
 
-- 🪶 **5KB** - Smaller than a favicon
+- 🪶 **30KB** - Lightweight and fast
 - 🚀 **Zero dependencies** - Pure vanilla JavaScript
 - 🎯 **Laravel-first** - Built for Blade conventions
 - 📦 **No build step** - Include and go
@@ -185,7 +185,7 @@ public function index(Request $request)
 
 ## Components
 
-LiveBlade provides components via `data-lb` attributes:
+LiveBlade provides 12 components via `data-lb` attributes:
 
 ### 1. HTML Container
 
@@ -391,85 +391,10 @@ Action buttons (refresh, load more, custom fetch).
 </button>
 ```
 
-### 11. Form Submission
-
-AJAX form submission with validation.
-
-```blade
-<form data-lb-form 
-      data-lb-target="#taskList"
-      data-lb-success="Task created!"
-      action="/tasks" 
-      method="POST">
-    @csrf
-    
-    <input name="name" required>
-    <textarea name="description"></textarea>
-    
-    <button type="submit">Create</button>
-    
-    <!-- Errors show here automatically -->
-    <div data-lb-errors></div>
-</form>
-```
-
-**Laravel controller:**
-
-```php
-public function store(Request $request)
-{
-    $validated = $request->validate([
-        'name' => 'required|max:255',
-        'description' => 'nullable',
-    ]);
-
-    Task::create($validated);
-
-    if ($request->ajax()) {
-        return response()->json(['success' => true]);
-    }
-
-    return redirect()->route('tasks.index');
-}
-```
-
-**Features:**
-- Shows validation errors inline
-- Shows success message
-- Refreshes target on success
-- Resets form
-- Supports file uploads
-
-### 12. Confirmation Dialogs
-
-"Are you sure?" before actions.
-
-```blade
-<input type="checkbox" 
-       data-lb-checkbox
-       data-lb-fetch="/tasks/{{ $task->id }}/delete"
-       data-lb-confirm="Delete this task?"
-       name="deleted">
-```
-
-### 13. Modal Integration
-
-Close modal after form submission.
-
-```blade
-<form data-lb-form 
-      data-lb-target="#taskList"
-      data-lb-close="#createModal"
-      action="/tasks" 
-      method="POST">
-    @csrf
-    <!-- form fields -->
-</form>
-```
-
-### 14. Quick Search (Autocomplete)
+### 11. Quick Search (Autocomplete)
 
 Typeahead search with dropdown results.
+
 ```blade
 <!-- Basic -->
 <input data-lb-quick-search="/users/search" 
@@ -503,6 +428,7 @@ Typeahead search with dropdown results.
 | `data-lb-display` | `title` | Property to show in input after selection |
 
 **Laravel Controller:**
+
 ```php
 public function search(Request $request)
 {
@@ -521,6 +447,7 @@ public function search(Request $request)
 ```
 
 **JSON Response Format:**
+
 ```json
 [
     { "id": 1, "title": "John Doe", "subtitle": "john@example.com", "picture": "/img/john.jpg" },
@@ -536,6 +463,7 @@ public function search(Request $request)
 - ARIA accessible
 
 **Events:**
+
 ```javascript
 // Listen for selection
 document.querySelector('input').addEventListener('lb:quicksearch:select', function(e) {
@@ -545,9 +473,134 @@ document.querySelector('input').addEventListener('lb:quicksearch:select', functi
 ```
 
 **Route:**
+
 ```php
 Route::get('/users/search', [UserController::class, 'search']);
 ```
+
+### 12. Cascade Select (Dependent Dropdowns)
+
+Cascading/dependent dropdowns that load options from API.
+
+```blade
+<!-- Parent -->
+<select data-lb-cascade 
+        data-lb-fetch="/countries/{value}/states" 
+        data-lb-target="#state-select"
+        name="country">
+    <option value="">Select Country</option>
+    <option value="CA">Canada</option>
+    <option value="US">United States</option>
+</select>
+
+<!-- Child -->
+<select id="state-select" name="state" disabled>
+    <option value="">Select State</option>
+</select>
+```
+
+**Options:**
+
+| Attribute | Default | Description |
+|-----------|---------|-------------|
+| `data-lb-cascade` | — | Marks as cascade parent (required) |
+| `data-lb-fetch` | — | URL with `{value}` placeholder (required) |
+| `data-lb-target` | — | Child select selector (required) |
+| `data-lb-placeholder` | `Select...` | Child placeholder text |
+| `data-lb-loading` | `Loading...` | Loading state text |
+| `data-lb-error` | `Error loading options` | Error state text |
+| `data-lb-value-field` | `id` | JSON field for option value |
+| `data-lb-text-field` | `name` | JSON field for option text |
+| `data-lb-selected` | — | Pre-select value after loading (for edit forms) |
+
+**3-Level Cascade (Country → State → City):**
+
+```blade
+<!-- Country -->
+<select data-lb-cascade 
+        data-lb-fetch="/countries/{value}/states" 
+        data-lb-target="#state-select"
+        name="country">
+    <option value="">Select Country</option>
+    <option value="CA">Canada</option>
+</select>
+
+<!-- State (also a cascade parent) -->
+<select data-lb-cascade 
+        data-lb-fetch="/states/{value}/cities" 
+        data-lb-target="#city-select"
+        id="state-select" 
+        name="state" 
+        disabled>
+    <option value="">Select State</option>
+</select>
+
+<!-- City -->
+<select id="city-select" name="city" disabled>
+    <option value="">Select City</option>
+</select>
+```
+
+**Pre-selected Value (for edit forms):**
+
+```blade
+<select data-lb-cascade 
+        data-lb-fetch="/countries/{value}/states" 
+        data-lb-target="#state-select"
+        data-lb-selected="QC"
+        name="country">
+    <option value="">Select Country</option>
+    <option value="CA" selected>Canada</option>
+</select>
+
+<select id="state-select" name="state" disabled>
+    <option value="">Select State</option>
+    <!-- Will auto-select Quebec after loading -->
+</select>
+```
+
+**Laravel Controller:**
+
+```php
+public function states($countryCode)
+{
+    return State::where('country_code', $countryCode)
+        ->orderBy('name')
+        ->get(['id', 'name']);
+}
+```
+
+**JSON Response Format:**
+
+```json
+[
+    { "id": "QC", "name": "Quebec" },
+    { "id": "ON", "name": "Ontario" }
+]
+```
+
+**Features:**
+- `{value}` placeholder replaced with selected value
+- Loading state while fetching
+- Caches results (won't re-fetch same selection)
+- Chains multiple levels (Country → State → City)
+- Pre-select support for edit forms
+- Disables child until parent selected
+
+**Events:**
+
+```javascript
+document.querySelector('#state-select').addEventListener('lb:cascade:loaded', (e) => {
+    console.log('Loaded:', e.detail.options);
+});
+```
+
+**Route:**
+
+```php
+Route::get('/countries/{country}/states', [LocationController::class, 'states']);
+```
+
 ---
 
 ## Complete Example
@@ -665,7 +718,7 @@ Route::get('/users/search', [UserController::class, 'search']);
             
             <div class=""
                 data-lb="/tasks?status=completed" 
-                 data-lb-interval="190"   <!-- ← 190 seconds -->
+                 data-lb-interval="190"
                  id="tasksTable"></div>
 
         </div>
@@ -812,7 +865,7 @@ class TaskController extends Controller
     }
 
 
-    // Optional minify html response to reudce the partial view size
+    // Optional minify html response to reduce the partial view size
     private function minify($html)
     {
         if (empty($html)) {
@@ -936,12 +989,16 @@ document.getElementById('taskList').addEventListener('lb:error', function(e) {
 ```
 
 **Available events:**
+
 - `lb:loaded` - After content loads
 - `lb:error` - On error
-- `lb:form-success` - After form submission
-- `lb:form-error` - On form error
 - `lb:checkbox-success` - After checkbox toggle
 - `lb:checkbox-error` - On checkbox error
+- `lb:quicksearch:select` - After quick search item selected
+- `lb:cascade:loading` - When cascade fetch starts
+- `lb:cascade:loaded` - When cascade options loaded
+- `lb:cascade:error` - When cascade fetch fails
+- `lb:cascade:reset` - When cascade child is reset
 
 ---
 
@@ -949,7 +1006,7 @@ document.getElementById('taskList').addEventListener('lb:error', function(e) {
 
 | Feature | LiveBlade | Livewire | HTMX | Alpine AJAX | React/Vue |
 |---------|-----------|----------|------|-------------|-----------|
-| Size | 0.2 kB | 60KB | 13KB | 3KB | 40KB+ |
+| Size | 30KB | 60KB | 47KB | 3KB | 40KB+ |
 | Dependencies | 0 | 0 | 0 | Alpine.js | Many |
 | Laravel-First | ✅ | ✅ | ❌ | ❌ | ❌ |
 | No Backend Changes | ✅ | ❌ | ✅ | ✅ | ❌ |

@@ -32,6 +32,7 @@ const files = [
     'src/features/data.js',
     'src/features/pagination.js',
     'src/features/quick-search.js',
+    'src/features/cascade.js',
 
     // Optional Features (uncomment to enable)
     // 'src/features/toast.js',

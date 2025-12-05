@@ -533,6 +533,24 @@ th[data-lb-sort][aria-sort="descending"]::after {
 }
 
 /* ===========================================
+   CASCADE SELECT
+   =========================================== */
+.lb-cascade-loading {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.lb-cascade-loading,
+.lb-cascade-error {
+    background-color: #f9fafb;
+}
+
+.lb-cascade-error {
+    border-color: #fca5a5 !important;
+    color: #991b1b;
+}
+
+/* ===========================================
    DARK MODE (opt-in via data-lb-theme="dark" or .lb-theme-dark)
    =========================================== */
 [data-lb-theme="dark"] .lb-loading::before,
