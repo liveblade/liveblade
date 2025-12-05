@@ -732,9 +732,10 @@ Route::get('/countries/{country}/states', [LocationController::class, 'states'])
         </div>
 
         <div class="card-body p-0">
-            
+
             <div class=""
-                data-lb="/tasks?status=completed" 
+                data-lb-html
+                data-lb-fetch="/tasks?status=completed" 
                  data-lb-interval="190"
                  id="tasksTable"></div>
 
@@ -753,7 +754,7 @@ Route::get('/countries/{country}/states', [LocationController::class, 'states'])
         <tr class="bg-light">
             <th><input type="checkbox" class="selected" name="select-all" value="1"></th>
             <th class="pointer" data-lb-sort="id">ID</th>
-            <th class="pointer" data-lb-sort="subject">Name</th>
+            <th class="pointer" data-lb-sort="name">Name</th>
             <th class="pointer" data-lb-sort="status">Status</th>
             <th class="pointer" data-lb-sort="due_date">Due Date</th>
             <th class="pointer" data-lb-sort="priority">Priority</th>
@@ -767,7 +768,7 @@ Route::get('/countries/{country}/states', [LocationController::class, 'states'])
             <tr id="taskRow_{{ $task->id }}">
                 <td><input type="checkbox" class="selected" name="completed" value="1"></td>
                 <td>{{ $task->id }}</td>
-                <td>{{ $task->subject }}</td>
+                <td>{{ $task->name }}</td>
                 <td>{{ ucfirst($task->status) }}</td>
                 <td>{{ $task->due_date }}</td>
                 <td>{{ ucfirst($task->priority) }}</td>
@@ -845,20 +846,22 @@ class TaskController extends Controller
 {
     public function index(Request $request)
     {
-        $tasks = Task::query()
-            ->when($request->search, fn($q, $s) => 
-                $q->where('name', 'like', "%{$s}%"))
-            ->when($request->status, fn($q, $s) => 
-                $q->where('status', $s))
-            ->when($request->due_date, fn($q, $d) => 
-                $q->whereDate('due_date', $d))
-            ->when($request->sort, fn($q, $s) => 
-                $q->orderBy($s, $request->dir ?? 'asc'))
-            ->when($request->view === 'my-tasks', fn($q) => 
-                $q->where('user_id', auth()->id()))
-            ->paginate(20);
-
+        
         if ($request->ajax()) {
+
+            $tasks = Task::query()
+                ->when($request->search, fn($q, $s) => 
+                    $q->where('name', 'like', "%{$s}%"))
+                ->when($request->status, fn($q, $s) => 
+                    $q->where('status', $s))
+                ->when($request->due_date, fn($q, $d) => 
+                    $q->whereDate('due_date', $d))
+                ->when($request->sort, fn($q, $s) => 
+                    $q->orderBy($s, $request->dir ?? 'asc'))
+                ->when($request->view === 'my-tasks', fn($q) => 
+                    $q->where('user_id', auth()->id()))
+                ->paginate(20);
+
             return response()->json([
                 // Minify the HTML output to reduce the response size
                 // 'html' => $this->minify(view('tasks.partials.table', compact('tasks'))->render())
@@ -872,7 +875,7 @@ class TaskController extends Controller
             ])->header('Cache-Control', 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0');
         }
 
-        return view('tasks.index', compact('tasks'));
+        return view('tasks.index');
     }
 
     public function complete(Request $request, Task $task)
