@@ -78,8 +78,8 @@ Every Laravel developer has felt this pain:
 <a data-lb-nav href="/tasks?status=open" data-lb-target="#taskList">Open</a>
 <a data-lb-nav href="/tasks?status=completed" data-lb-target="#taskList">Completed</a>
 
-<!-- Dynamic table example -->
-<div id="taskList" data-lb="/tasks"></div>
+<!-- Dynamic simple table example -->
+<div id="taskList" data-lb-html data-lb-fetch="/tasks"></div>
 @endsection
 ```
 
@@ -484,7 +484,8 @@ Cascading/dependent dropdowns that load options from API.
 
 ```blade
 <!-- Parent -->
-<select data-lb-cascade 
+<select 
+        data-lb-cascade 
         data-lb-fetch="/countries/{value}/states" 
         data-lb-target="#state-select"
         name="country">
@@ -497,6 +498,7 @@ Cascading/dependent dropdowns that load options from API.
 <select id="state-select" name="state" disabled>
     <option value="">Select State</option>
 </select>
+
 ```
 
 **Options:**
