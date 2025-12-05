@@ -963,7 +963,7 @@ LiveBlade.configure({
 
 Enable dark mode by adding the theme attribute:
 
-\`\`\`html
+```
 <body data-lb-theme="dark">
     <!-- Your content -->
 </body>
@@ -972,7 +972,8 @@ Enable dark mode by adding the theme attribute:
 <body class="lb-theme-dark">
     <!-- Your content -->
 </body>
-\`\`\`
+
+```
 
 ---
 
