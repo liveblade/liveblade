@@ -797,7 +797,16 @@ Route::get('/countries/{country}/states', [LocationController::class, 'states'])
                         <div class="dropdown-menu dropdown-menu-right">
                             <a class="dropdown-item"  href="{{ url("tasks/{$task->uuid}") }}">Edit</a>
                             <div class="dropdown-divider"></div>
-                            <a class="dropdown-item delete-id text-danger" data-target="#delete-task-modal" data-toggle="modal" href="#">Delete</a>
+                            <a class="dropdown-item delete-id text-danger" data-target="#delete-task-modal" data-toggle="modal" href="javascript:void(0)"
+                                data-lb-fetch="/tasks/{{ $task->id }}/remove" 
+                                data-lb-method="DELETE"
+                                data-lb-confirm-title="Remove Task"
+                                data-lb-confirm="Are you sure you want to remove this task?" 
+                                data-lb-confirm-yes="Yes, remove"
+                                data-lb-confirm-no="Keep task"
+                                data-lb-target="#taskRow_{{ $task->id }}"  
+                                data-lb-action="hide" 
+                                >Delete</a>
                         </div>
                     </div>
                 </td>
