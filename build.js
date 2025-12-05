@@ -33,14 +33,19 @@ const files = [
     'src/features/pagination.js',
     'src/features/quick-search.js',
     'src/features/cascade.js',
+    'src/features/confirm.js',
+    'src/features/rating.js',
+    'src/features/word-counter.js',
 
     // Optional Features (uncomment to enable)
     // 'src/features/toast.js',
     // 'src/features/modals.js',
     // 'src/features/forms.js',
     // 'src/features/inline-edit.js',
-    // 'src/features/delete.js',
     // 'src/features/bulk-actions.js',
+    // 'src/features/confirm.js',
+    // 'src/features/rating.js',
+    // 'src/features/word-counter.js',    
 ];
 
 const cssfiles = [

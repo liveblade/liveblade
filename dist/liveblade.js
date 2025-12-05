@@ -19,6 +19,9 @@
  *   - pagination
  *   - quick-search
  *   - cascade
+ *   - confirm
+ *   - rating
+ *   - word-counter
  */
 
 
@@ -2371,6 +2374,929 @@
     // Export for module systems
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = { CascadeController, CascadeFeature, CascadeBinder };
+    }
+
+})(window, document);
+
+// ============================================================
+// confirm.js
+// ============================================================
+/**
+ * LiveBlade Feature: Confirm Action
+ * "Are you sure?" confirmation before actions
+ *
+ * Usage:
+ *   <!-- Basic confirm -->
+ *   <button data-lb-confirm="Delete this item?" 
+ *           data-lb-fetch="/items/1/delete" 
+ *           data-lb-method="DELETE">
+ *       Delete
+ *   </button>
+ *
+ *   <!-- With target refresh -->
+ *   <button data-lb-confirm="Remove from list?" 
+ *           data-lb-fetch="/items/1/remove" 
+ *           data-lb-method="POST"
+ *           data-lb-target="#items-list">
+ *       Remove
+ *   </button>
+ *
+ *   <!-- Link with confirm -->
+ *   <a href="/logout" data-lb-confirm="Are you sure you want to logout?">
+ *       Logout
+ *   </a>
+ *
+ * Options (data attributes):
+ *   data-lb-confirm       - Confirmation message (required)
+ *   data-lb-fetch         - URL to call on confirm (optional, uses href if not set)
+ *   data-lb-method        - HTTP method: GET, POST, PUT, DELETE (default: POST)
+ *   data-lb-target        - Selector to refresh after success (optional)
+ *   data-lb-confirm-yes   - Text for confirm button (default: "Yes")
+ *   data-lb-confirm-no    - Text for cancel button (default: "Cancel")
+ *   data-lb-confirm-title - Title for dialog (default: "Confirm")
+ *
+ * Events:
+ *   lb:confirm:show      - Before dialog shows
+ *   lb:confirm:cancel    - When user cancels
+ *   lb:confirm:confirmed - When user confirms (before fetch)
+ *   lb:confirm:success   - After successful action
+ *   lb:confirm:error     - On error
+ */
+
+;(function (window, document) {
+    "use strict";
+
+    // Modal HTML template
+    const modalTemplate = `
+        <div class="lb-confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="lb-confirm-title">
+            <div class="lb-confirm-dialog">
+                <div class="lb-confirm-header">
+                    <h4 id="lb-confirm-title" class="lb-confirm-title"></h4>
+                </div>
+                <div class="lb-confirm-body">
+                    <p class="lb-confirm-message"></p>
+                </div>
+                <div class="lb-confirm-footer">
+                    <button type="button" class="lb-confirm-btn lb-confirm-btn-cancel"></button>
+                    <button type="button" class="lb-confirm-btn lb-confirm-btn-yes"></button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    let modalElement = null;
+    let currentCallback = null;
+
+    /**
+     * Create modal if not exists
+     */
+    function ensureModal() {
+        if (modalElement) return modalElement;
+
+        const div = document.createElement('div');
+        div.innerHTML = modalTemplate.trim();
+        modalElement = div.firstChild;
+        document.body.appendChild(modalElement);
+
+        // Event listeners
+        const cancelBtn = modalElement.querySelector('.lb-confirm-btn-cancel');
+        const yesBtn = modalElement.querySelector('.lb-confirm-btn-yes');
+        const overlay = modalElement;
+
+        cancelBtn.addEventListener('click', () => hideModal(false));
+        yesBtn.addEventListener('click', () => hideModal(true));
+
+        // Click outside to cancel
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) hideModal(false);
+        });
+
+        // Escape key to cancel
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modalElement.classList.contains('lb-confirm-show')) {
+                hideModal(false);
+            }
+        });
+
+        return modalElement;
+    }
+
+    /**
+     * Show confirmation dialog
+     */
+    function showModal(options, callback) {
+        const modal = ensureModal();
+        currentCallback = callback;
+
+        // Set content
+        modal.querySelector('.lb-confirm-title').textContent = options.title || 'Confirm';
+        modal.querySelector('.lb-confirm-message').textContent = options.message;
+        modal.querySelector('.lb-confirm-btn-cancel').textContent = options.cancelText || 'Cancel';
+        modal.querySelector('.lb-confirm-btn-yes').textContent = options.confirmText || 'Yes';
+
+        // Show
+        modal.classList.add('lb-confirm-show');
+        modal.querySelector('.lb-confirm-btn-yes').focus();
+
+        // Prevent body scroll
+        document.body.style.overflow = 'hidden';
+    }
+
+    /**
+     * Hide modal and call callback
+     */
+    function hideModal(confirmed) {
+        if (!modalElement) return;
+
+        modalElement.classList.remove('lb-confirm-show');
+        document.body.style.overflow = '';
+
+        if (currentCallback) {
+            currentCallback(confirmed);
+            currentCallback = null;
+        }
+    }
+
+    /**
+     * Handle confirm action
+     */
+    async function handleConfirm(el, LiveBlade) {
+        const message = el.dataset.lbConfirm;
+        const url = el.dataset.lbFetch || el.getAttribute('href');
+        const method = (el.dataset.lbMethod || 'POST').toUpperCase();
+        const targetSelector = el.dataset.lbTarget;
+        const title = el.dataset.lbConfirmTitle;
+        const confirmText = el.dataset.lbConfirmYes;
+        const cancelText = el.dataset.lbConfirmNo;
+
+        // Emit show event
+        const showEvent = new CustomEvent('lb:confirm:show', {
+            detail: { element: el, message },
+            bubbles: true,
+            cancelable: true
+        });
+        el.dispatchEvent(showEvent);
+        if (showEvent.defaultPrevented) return;
+
+        // Show confirmation dialog
+        showModal({
+            title,
+            message,
+            confirmText,
+            cancelText
+        }, async (confirmed) => {
+            if (!confirmed) {
+                el.dispatchEvent(new CustomEvent('lb:confirm:cancel', {
+                    detail: { element: el },
+                    bubbles: true
+                }));
+                return;
+            }
+
+            // Emit confirmed event
+            el.dispatchEvent(new CustomEvent('lb:confirm:confirmed', {
+                detail: { element: el, url, method },
+                bubbles: true
+            }));
+
+            // If no URL, just follow the link (for simple confirmations)
+            if (!url) return;
+
+            // If it's a GET with href and no fetch, just navigate
+            if (method === 'GET' && !el.dataset.lbFetch && el.getAttribute('href')) {
+                window.location.href = el.getAttribute('href');
+                return;
+            }
+
+            // Add loading state
+            el.classList.add('lb-confirm-loading');
+            const originalText = el.textContent;
+            el.disabled = true;
+
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': LiveBlade.getCsrf()
+                    },
+                    credentials: 'same-origin'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // Success feedback
+                el.classList.remove('lb-confirm-loading');
+                el.classList.add('lb-confirm-success');
+
+                // Emit success event
+                el.dispatchEvent(new CustomEvent('lb:confirm:success', {
+                    detail: { element: el, data },
+                    bubbles: true
+                }));
+
+                // // Refresh target if specified
+                // if (targetSelector) {
+                //     const target = document.querySelector(targetSelector);
+                //     if (target && LiveBlade.refresh) {
+                //         LiveBlade.refresh(targetSelector);
+                //     }
+                // }
+
+                // Handle actions on target
+                if (targetSelector) {
+                    const target = document.querySelector(targetSelector);
+                    const action = el.dataset.lbAction || 'refresh'; // default
+
+                    if (target) {
+                        switch (action) {
+
+                            case 'hide':
+                                target.style.transition = "opacity .25s ease";
+                                target.style.opacity = "0";
+                                setTimeout(() => target.remove(), 250);
+                                break;
+
+                            case 'remove':
+                                target.remove();
+                                break;
+
+                            case 'refresh':
+                                if (LiveBlade.refresh) LiveBlade.refresh(targetSelector);
+                                break;
+
+                            case 'none':
+                                // do nothing
+                                break;
+                        }
+                    }
+                }
+
+
+                // Remove success state after delay
+                setTimeout(() => {
+                    el.classList.remove('lb-confirm-success');
+                    el.disabled = false;
+                }, 1500);
+
+            } catch (err) {
+                console.error('Confirm action error:', err);
+
+                el.classList.remove('lb-confirm-loading');
+                el.classList.add('lb-confirm-error');
+                el.disabled = false;
+
+                // Emit error event
+                el.dispatchEvent(new CustomEvent('lb:confirm:error', {
+                    detail: { element: el, error: err },
+                    bubbles: true
+                }));
+
+                // Remove error state after delay
+                setTimeout(() => {
+                    el.classList.remove('lb-confirm-error');
+                }, 2000);
+            }
+        });
+    }
+
+    /**
+     * Confirm Binder
+     */
+    const ConfirmBinder = {
+        selector: '[data-lb-confirm]',
+
+        bind(el, LiveBlade) {
+            if (el._lbConfirm) return;
+            el._lbConfirm = true;
+
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleConfirm(el, LiveBlade);
+            });
+        }
+    };
+
+    /**
+     * Feature registration
+     */
+    const ConfirmFeature = {
+        init(LiveBlade) {
+            // Expose confirm method for programmatic use
+            LiveBlade.confirm = function(message, options = {}) {
+                return new Promise((resolve) => {
+                    showModal({
+                        message,
+                        title: options.title,
+                        confirmText: options.confirmText || options.yes,
+                        cancelText: options.cancelText || options.no
+                    }, resolve);
+                });
+            };
+        }
+    };
+
+    // Register
+    if (window.LiveBlade) {
+        window.LiveBlade.registerFeature('confirm', ConfirmFeature);
+        window.LiveBlade.registerBinder('confirm', ConfirmBinder);
+    }
+
+    // Export
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = { ConfirmFeature, ConfirmBinder };
+    }
+
+})(window, document);
+
+// ============================================================
+// rating.js
+// ============================================================
+/**
+ * LiveBlade Feature: Star Rating
+ * Interactive star rating with optional POST to server
+ *
+ * Usage:
+ *   <!-- Basic (display only) -->
+ *   <div data-lb-rating data-lb-value="3"></div>
+ *
+ *   <!-- Interactive with POST -->
+ *   <div data-lb-rating 
+ *        data-lb-value="3" 
+ *        data-lb-fetch="/products/1/rate"
+ *        data-lb-param="rating">
+ *   </div>
+ *
+ *   <!-- Custom max stars -->
+ *   <div data-lb-rating data-lb-value="7" data-lb-max="10"></div>
+ *
+ *   <!-- Read-only -->
+ *   <div data-lb-rating data-lb-value="4.5" data-lb-readonly></div>
+ *
+ * Options (data attributes):
+ *   data-lb-rating    - Marks as rating component (required)
+ *   data-lb-value     - Current rating value (default: 0)
+ *   data-lb-max       - Maximum stars (default: 5)
+ *   data-lb-fetch     - URL to POST rating (optional)
+ *   data-lb-param     - Parameter name for rating (default: "rating")
+ *   data-lb-readonly  - Disable interaction
+ *   data-lb-half      - Allow half-star ratings
+ *   data-lb-size      - Size: "sm", "md", "lg" (default: "md")
+ *
+ * Events:
+ *   lb:rating:change  - When rating changes (before POST)
+ *   lb:rating:success - After successful POST
+ *   lb:rating:error   - On POST error
+ */
+
+;(function (window, document) {
+    "use strict";
+
+    // Star SVG icons
+    const starFull = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`;
+    const starEmpty = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`;
+    const starHalf = `<svg viewBox="0 0 24 24"><defs><linearGradient id="half"><stop offset="50%" stop-color="currentColor"/><stop offset="50%" stop-color="transparent"/></linearGradient></defs><path fill="url(#half)" stroke="currentColor" stroke-width="2" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`;
+
+    /**
+     * Rating Controller
+     */
+    function RatingController(el, LiveBlade) {
+        this.container = el;
+        this.LiveBlade = LiveBlade;
+        this.value = parseFloat(el.dataset.lbValue) || 0;
+        this.max = parseInt(el.dataset.lbMax, 10) || 5;
+        this.url = el.dataset.lbFetch;
+        this.paramName = el.dataset.lbParam || 'rating';
+        this.readonly = el.hasAttribute('data-lb-readonly');
+        this.allowHalf = el.hasAttribute('data-lb-half');
+        this.size = el.dataset.lbSize || 'md';
+        this.hoverValue = null;
+
+        this._init();
+    }
+
+    RatingController.prototype._init = function () {
+        // Add classes
+        this.container.classList.add('lb-rating');
+        this.container.classList.add('lb-rating-' + this.size);
+        if (this.readonly) {
+            this.container.classList.add('lb-rating-readonly');
+        }
+
+        // Create stars
+        this._render();
+
+        // Event listeners (if not readonly)
+        if (!this.readonly) {
+            this.container.addEventListener('mousemove', this._onMouseMove.bind(this));
+            this.container.addEventListener('mouseleave', this._onMouseLeave.bind(this));
+            this.container.addEventListener('click', this._onClick.bind(this));
+            this.container.addEventListener('keydown', this._onKeyDown.bind(this));
+            this.container.setAttribute('tabindex', '0');
+            this.container.setAttribute('role', 'slider');
+            this.container.setAttribute('aria-valuemin', '0');
+            this.container.setAttribute('aria-valuemax', this.max.toString());
+            this.container.setAttribute('aria-valuenow', this.value.toString());
+            this.container.setAttribute('aria-label', 'Rating');
+        }
+    };
+
+    RatingController.prototype._render = function () {
+        const displayValue = this.hoverValue !== null ? this.hoverValue : this.value;
+        let html = '';
+
+        for (let i = 1; i <= this.max; i++) {
+            const starClass = 'lb-rating-star';
+            let starIcon;
+
+            if (displayValue >= i) {
+                starIcon = starFull;
+            } else if (this.allowHalf && displayValue >= i - 0.5) {
+                starIcon = starHalf;
+            } else {
+                starIcon = starEmpty;
+            }
+
+            html += `<span class="${starClass}" data-value="${i}">${starIcon}</span>`;
+        }
+
+        this.container.innerHTML = html;
+    };
+
+    RatingController.prototype._getValueFromEvent = function (e) {
+        const star = e.target.closest('.lb-rating-star');
+        if (!star) return null;
+
+        let value = parseInt(star.dataset.value, 10);
+
+        // Calculate half star if enabled
+        if (this.allowHalf) {
+            const rect = star.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            if (x < rect.width / 2) {
+                value -= 0.5;
+            }
+        }
+
+        return value;
+    };
+
+    RatingController.prototype._onMouseMove = function (e) {
+        const value = this._getValueFromEvent(e);
+        if (value !== null && value !== this.hoverValue) {
+            this.hoverValue = value;
+            this._render();
+        }
+    };
+
+    RatingController.prototype._onMouseLeave = function () {
+        this.hoverValue = null;
+        this._render();
+    };
+
+    RatingController.prototype._onClick = function (e) {
+        const value = this._getValueFromEvent(e);
+        if (value !== null) {
+            this._setValue(value);
+        }
+    };
+
+    RatingController.prototype._onKeyDown = function (e) {
+        let newValue = this.value;
+        const step = this.allowHalf ? 0.5 : 1;
+
+        switch (e.key) {
+            case 'ArrowRight':
+            case 'ArrowUp':
+                e.preventDefault();
+                newValue = Math.min(this.max, this.value + step);
+                break;
+            case 'ArrowLeft':
+            case 'ArrowDown':
+                e.preventDefault();
+                newValue = Math.max(0, this.value - step);
+                break;
+            case 'Home':
+                e.preventDefault();
+                newValue = 0;
+                break;
+            case 'End':
+                e.preventDefault();
+                newValue = this.max;
+                break;
+            default:
+                return;
+        }
+
+        if (newValue !== this.value) {
+            this._setValue(newValue);
+        }
+    };
+
+    RatingController.prototype._setValue = async function (value) {
+        const oldValue = this.value;
+        this.value = value;
+        this.hoverValue = null;
+        this._render();
+
+        // Update ARIA
+        this.container.setAttribute('aria-valuenow', value.toString());
+
+        // Update data attribute
+        this.container.dataset.lbValue = value.toString();
+
+        // Emit change event
+        const changeEvent = new CustomEvent('lb:rating:change', {
+            detail: { element: this.container, value, oldValue },
+            bubbles: true,
+            cancelable: true
+        });
+        this.container.dispatchEvent(changeEvent);
+
+        if (changeEvent.defaultPrevented) {
+            // Revert if prevented
+            this.value = oldValue;
+            this._render();
+            return;
+        }
+
+        // POST to server if URL provided
+        if (this.url) {
+            await this._postRating(value, oldValue);
+        }
+    };
+
+    RatingController.prototype._postRating = async function (value, oldValue) {
+        this.container.classList.add('lb-rating-loading');
+
+        try {
+            const body = {};
+            body[this.paramName] = value;
+
+            const response = await fetch(this.url, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': this.LiveBlade.getCsrf()
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(body)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            // Success
+            this.container.classList.remove('lb-rating-loading');
+            this.container.classList.add('lb-rating-success');
+
+            this.container.dispatchEvent(new CustomEvent('lb:rating:success', {
+                detail: { element: this.container, value, data },
+                bubbles: true
+            }));
+
+            setTimeout(() => {
+                this.container.classList.remove('lb-rating-success');
+            }, 1000);
+
+        } catch (err) {
+            console.error('Rating error:', err);
+
+            // Revert value
+            this.value = oldValue;
+            this._render();
+
+            this.container.classList.remove('lb-rating-loading');
+            this.container.classList.add('lb-rating-error');
+
+            this.container.dispatchEvent(new CustomEvent('lb:rating:error', {
+                detail: { element: this.container, error: err },
+                bubbles: true
+            }));
+
+            setTimeout(() => {
+                this.container.classList.remove('lb-rating-error');
+            }, 2000);
+        }
+    };
+
+    /**
+     * Public method to get value
+     */
+    RatingController.prototype.getValue = function () {
+        return this.value;
+    };
+
+    /**
+     * Public method to set value programmatically
+     */
+    RatingController.prototype.setValue = function (value) {
+        this._setValue(value);
+    };
+
+    /**
+     * Rating Binder
+     */
+    const RatingBinder = {
+        selector: '[data-lb-rating]',
+
+        bind(el, LiveBlade) {
+            if (el._lbRating) return;
+            el._lbRating = new RatingController(el, LiveBlade);
+        }
+    };
+
+    /**
+     * Feature registration
+     */
+    const RatingFeature = {
+        init(LiveBlade) {
+            LiveBlade.RatingController = RatingController;
+        }
+    };
+
+    // Register
+    if (window.LiveBlade) {
+        window.LiveBlade.registerFeature('rating', RatingFeature);
+        window.LiveBlade.registerBinder('rating', RatingBinder);
+    }
+
+    // Export
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = { RatingController, RatingFeature, RatingBinder };
+    }
+
+})(window, document);
+
+// ============================================================
+// word-counter.js
+// ============================================================
+/**
+ * LiveBlade Feature: Character/Word Counter
+ * Live counter for input fields and textareas
+ *
+ * Usage:
+ *   <!-- Character counter -->
+ *   <textarea data-lb-counter data-lb-max="500" data-lb-target="#char-count"></textarea>
+ *   <span id="char-count">0/500</span>
+ *
+ *   <!-- Word counter -->
+ *   <textarea data-lb-counter="words" data-lb-max="100" data-lb-target="#word-count"></textarea>
+ *   <span id="word-count">0/100 words</span>
+ *
+ *   <!-- Character counter with warning threshold -->
+ *   <textarea data-lb-counter 
+ *             data-lb-max="280" 
+ *             data-lb-warn="250"
+ *             data-lb-target="#tweet-count">
+ *   </textarea>
+ *   <span id="tweet-count">0/280</span>
+ *
+ *   <!-- No max limit (just counting) -->
+ *   <textarea data-lb-counter data-lb-target="#count"></textarea>
+ *   <span id="count">0 characters</span>
+ *
+ * Options (data attributes):
+ *   data-lb-counter   - Type: "chars" (default) or "words"
+ *   data-lb-max       - Maximum count (optional, enables limit)
+ *   data-lb-min       - Minimum count (optional)
+ *   data-lb-warn      - Warning threshold (optional)
+ *   data-lb-target    - Selector for counter display (required)
+ *   data-lb-format    - Format: "fraction" (0/100), "remaining" (100 left), "count" (0)
+ *   data-lb-block     - Block input when max reached (default: false)
+ *
+ * Events:
+ *   lb:counter:update  - When count changes
+ *   lb:counter:max     - When max is reached
+ *   lb:counter:warn    - When warning threshold is reached
+ *   lb:counter:valid   - When count is within limits
+ *   lb:counter:invalid - When count exceeds limits
+ */
+
+;(function (window, document) {
+    "use strict";
+
+    /**
+     * Counter Controller
+     */
+    function CounterController(el, LiveBlade) {
+        this.input = el;
+        this.LiveBlade = LiveBlade;
+        
+        // Options
+        this.type = el.dataset.lbCounter || 'chars';
+        if (this.type === '' || this.type === 'true') this.type = 'chars';
+        
+        this.max = el.dataset.lbMax ? parseInt(el.dataset.lbMax, 10) : null;
+        this.min = el.dataset.lbMin ? parseInt(el.dataset.lbMin, 10) : null;
+        this.warn = el.dataset.lbWarn ? parseInt(el.dataset.lbWarn, 10) : null;
+        this.targetSelector = el.dataset.lbTarget;
+        this.format = el.dataset.lbFormat || 'fraction';
+        this.blockInput = el.hasAttribute('data-lb-block');
+        
+        this.target = document.querySelector(this.targetSelector);
+        this.lastCount = 0;
+
+        this._init();
+    }
+
+    CounterController.prototype._init = function () {
+        if (!this.target) {
+            console.warn('LiveBlade Counter: Target not found:', this.targetSelector);
+            return;
+        }
+
+        // Add class to input
+        this.input.classList.add('lb-counter-input');
+
+        // Initial count
+        this._update();
+
+        // Listen for input
+        this.input.addEventListener('input', this._onInput.bind(this));
+        this.input.addEventListener('paste', () => setTimeout(() => this._onInput(), 0));
+
+        // Block input if enabled and has max
+        if (this.blockInput && this.max && this.type === 'chars') {
+            this.input.addEventListener('keypress', this._onKeyPress.bind(this));
+        }
+    };
+
+    CounterController.prototype._getCount = function () {
+        const value = this.input.value;
+
+        if (this.type === 'words') {
+            // Count words (split by whitespace, filter empty)
+            const words = value.trim().split(/\s+/).filter(w => w.length > 0);
+            return value.trim() === '' ? 0 : words.length;
+        } else {
+            // Count characters
+            return value.length;
+        }
+    };
+
+    CounterController.prototype._onInput = function () {
+        this._update();
+    };
+
+    CounterController.prototype._onKeyPress = function (e) {
+        // Block new characters if at max (for character counter only)
+        if (this.max && this._getCount() >= this.max) {
+            // Allow control keys
+            if (e.ctrlKey || e.metaKey || e.key === 'Backspace' || e.key === 'Delete') {
+                return;
+            }
+            e.preventDefault();
+        }
+    };
+
+    CounterController.prototype._update = function () {
+        const count = this._getCount();
+        const wasOverLimit = this.lastCount > this.max;
+        const isOverLimit = this.max && count > this.max;
+        const isUnderMin = this.min && count < this.min;
+        const isAtWarn = this.warn && count >= this.warn;
+        const isAtMax = this.max && count >= this.max;
+
+        // Update display
+        this._updateDisplay(count);
+
+        // Update classes
+        this._updateClasses(count, isOverLimit, isUnderMin, isAtWarn, isAtMax);
+
+        // Emit events
+        if (count !== this.lastCount) {
+            this._emit('lb:counter:update', { count, max: this.max, type: this.type });
+
+            if (isAtMax && !wasOverLimit) {
+                this._emit('lb:counter:max', { count });
+            }
+
+            if (isAtWarn && this.lastCount < this.warn) {
+                this._emit('lb:counter:warn', { count, warn: this.warn });
+            }
+
+            if (isOverLimit || isUnderMin) {
+                this._emit('lb:counter:invalid', { count, max: this.max, min: this.min });
+            } else if ((wasOverLimit || (this.min && this.lastCount < this.min)) && !isOverLimit && !isUnderMin) {
+                this._emit('lb:counter:valid', { count });
+            }
+        }
+
+        this.lastCount = count;
+    };
+
+    CounterController.prototype._updateDisplay = function (count) {
+        let text;
+        const typeLabel = this.type === 'words' ? 'words' : 'characters';
+
+        switch (this.format) {
+            case 'remaining':
+                if (this.max) {
+                    const remaining = this.max - count;
+                    text = remaining >= 0 
+                        ? `${remaining} ${typeLabel} remaining`
+                        : `${Math.abs(remaining)} ${typeLabel} over limit`;
+                } else {
+                    text = `${count} ${typeLabel}`;
+                }
+                break;
+
+            case 'count':
+                text = count.toString();
+                break;
+
+            case 'fraction':
+            default:
+                if (this.max) {
+                    text = `${count}/${this.max}`;
+                } else {
+                    text = `${count} ${typeLabel}`;
+                }
+                break;
+        }
+
+        this.target.textContent = text;
+    };
+
+    CounterController.prototype._updateClasses = function (count, isOverLimit, isUnderMin, isAtWarn, isAtMax) {
+        // Input classes
+        this.input.classList.toggle('lb-counter-warn', isAtWarn && !isOverLimit);
+        this.input.classList.toggle('lb-counter-error', isOverLimit || isUnderMin);
+        this.input.classList.toggle('lb-counter-max', isAtMax && !isOverLimit);
+
+        // Target classes
+        this.target.classList.toggle('lb-counter-warn', isAtWarn && !isOverLimit);
+        this.target.classList.toggle('lb-counter-error', isOverLimit || isUnderMin);
+        this.target.classList.toggle('lb-counter-max', isAtMax && !isOverLimit);
+    };
+
+    CounterController.prototype._emit = function (eventName, detail) {
+        this.input.dispatchEvent(new CustomEvent(eventName, {
+            detail: { element: this.input, target: this.target, ...detail },
+            bubbles: true
+        }));
+    };
+
+    /**
+     * Public method to get count
+     */
+    CounterController.prototype.getCount = function () {
+        return this._getCount();
+    };
+
+    /**
+     * Public method to check if valid
+     */
+    CounterController.prototype.isValid = function () {
+        const count = this._getCount();
+        if (this.max && count > this.max) return false;
+        if (this.min && count < this.min) return false;
+        return true;
+    };
+
+    /**
+     * Counter Binder
+     */
+    const CounterBinder = {
+        selector: '[data-lb-counter]',
+
+        bind(el, LiveBlade) {
+            if (el._lbCounter) return;
+            el._lbCounter = new CounterController(el, LiveBlade);
+        }
+    };
+
+    /**
+     * Feature registration
+     */
+    const CounterFeature = {
+        init(LiveBlade) {
+            LiveBlade.CounterController = CounterController;
+        }
+    };
+
+    // Register
+    if (window.LiveBlade) {
+        window.LiveBlade.registerFeature('counter', CounterFeature);
+        window.LiveBlade.registerBinder('counter', CounterBinder);
+    }
+
+    // Export
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = { CounterController, CounterFeature, CounterBinder };
     }
 
 })(window, document);

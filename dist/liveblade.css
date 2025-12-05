@@ -551,6 +551,208 @@ th[data-lb-sort][aria-sort="descending"]::after {
 }
 
 /* ===========================================
+   CONFIRM DIALOG
+   =========================================== */
+.lb-confirm-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.lb-confirm-overlay.lb-confirm-show {
+    display: flex;
+}
+
+.lb-confirm-dialog {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    max-width: 400px;
+    width: 100%;
+    animation: lb-confirm-in 0.2s ease-out;
+}
+
+@keyframes lb-confirm-in {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.lb-confirm-header {
+    padding: 1rem 1.25rem 0;
+}
+
+.lb-confirm-title {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.lb-confirm-body {
+    padding: 0.75rem 1.25rem 1rem;
+}
+
+.lb-confirm-message {
+    margin: 0;
+    color: #4b5563;
+    line-height: 1.5;
+}
+
+.lb-confirm-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 0 1.25rem 1.25rem;
+}
+
+.lb-confirm-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.lb-confirm-btn-cancel {
+    background: #fff;
+    border: 1px solid #d1d5db;
+    color: #374151;
+}
+
+.lb-confirm-btn-cancel:hover {
+    background: #f3f4f6;
+}
+
+.lb-confirm-btn-yes {
+    background: #dc2626;
+    border: 1px solid #dc2626;
+    color: #fff;
+}
+
+.lb-confirm-btn-yes:hover {
+    background: #b91c1c;
+}
+
+.lb-confirm-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.lb-confirm-success {
+    opacity: 0.6;
+}
+
+.lb-confirm-error {
+    animation: lb-shake 0.4s ease;
+}
+
+@keyframes lb-shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-5px); }
+    40%, 80% { transform: translateX(5px); }
+}
+
+/* ===========================================
+   STAR RATING
+   =========================================== */
+.lb-rating {
+    display: inline-flex;
+    gap: 0.125rem;
+    cursor: pointer;
+}
+
+.lb-rating-readonly {
+    cursor: default;
+}
+
+.lb-rating-star {
+    color: #d1d5db;
+    transition: color 0.15s, transform 0.1s;
+}
+
+.lb-rating-star svg {
+    display: block;
+}
+
+.lb-rating:not(.lb-rating-readonly) .lb-rating-star:hover {
+    transform: scale(1.1);
+}
+
+.lb-rating-star svg[fill="currentColor"] {
+    color: #fbbf24;
+}
+
+/* Sizes */
+.lb-rating-sm .lb-rating-star svg {
+    width: 16px;
+    height: 16px;
+}
+
+.lb-rating-md .lb-rating-star svg {
+    width: 24px;
+    height: 24px;
+}
+
+.lb-rating-lg .lb-rating-star svg {
+    width: 32px;
+    height: 32px;
+}
+
+/* States */
+.lb-rating-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.lb-rating-success .lb-rating-star svg[fill="currentColor"] {
+    color: #10b981;
+}
+
+.lb-rating-error {
+    animation: lb-shake 0.4s ease;
+}
+
+/* ===========================================
+   CHARACTER/WORD COUNTER
+   =========================================== */
+.lb-counter-input.lb-counter-warn {
+    border-color: #f59e0b !important;
+}
+
+.lb-counter-input.lb-counter-error {
+    border-color: #ef4444 !important;
+}
+
+.lb-counter-input.lb-counter-max {
+    border-color: #f59e0b !important;
+}
+
+.lb-counter-warn {
+    color: #d97706;
+}
+
+.lb-counter-error {
+    color: #dc2626;
+}
+
+.lb-counter-max {
+    color: #d97706;
+    font-weight: 500;
+}
+
+/* ===========================================
    DARK MODE (opt-in via data-lb-theme="dark" or .lb-theme-dark)
    =========================================== */
 [data-lb-theme="dark"] .lb-loading::before,
