@@ -1,5 +1,5 @@
 ## 🚀 What is LiveBlade?
-**Server-driven reactivity for Laravel Blade. No page reloads. No React. No Vue. Just works.**
+**Server-driven reactivity for Laravel Blade. No page reloads. No React. No Vue. Just Blade.**
 
 > LiveBlade gives Blade the dynamic reactivity it always deserved.  
 > It uses Laravel’s underused server-side partial rendering (`render()`) to update your UI with AJAX—**no JS needed**.  
