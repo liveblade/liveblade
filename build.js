@@ -7,6 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const version = '1.0.1';
 
 // ===========================================
 // CUSTOMIZE YOUR BUILD HERE
@@ -37,15 +38,12 @@ const files = [
     'src/features/rating.js',
     'src/features/word-counter.js',
 
-    // Optional Features (uncomment to enable)
+    // Optional Features (uncomment to enable) ||  under development phase
     // 'src/features/toast.js',
     // 'src/features/modals.js',
     // 'src/features/forms.js',
     // 'src/features/inline-edit.js',
     // 'src/features/bulk-actions.js',
-    // 'src/features/confirm.js',
-    // 'src/features/rating.js',
-    // 'src/features/word-counter.js',    
 ];
 
 const cssfiles = [
@@ -64,7 +62,7 @@ console.log('LiveBlade Build');
 console.log('================\n');
 
 let output = `/*!
- * LiveBlade v2.0.0
+ * LiveBlade v${version}
  * Production-ready AJAX for Laravel Blade
  * @license MIT
  *
