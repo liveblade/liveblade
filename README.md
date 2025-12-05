@@ -56,8 +56,7 @@ Every Laravel developer has felt this pain:
 <html>
 <head>
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/gh/liveblade/liveblade@1/dist/liveblade.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/liveblade/liveblade@1/dist/liveblade.min.css">
 </head>
 <body>
     @yield('content')
@@ -94,7 +93,7 @@ Every Laravel developer has felt this pain:
         <tr class="bg-gray-50">
             <th><input type="checkbox" class="selected" name="select-all" value="1"></th>
             <th class="pointer" data-lb-sort="id">ID</th>
-            <th class="pointer" data-lb-sort="subject">Name</th>
+            <th class="pointer" data-lb-sort="name">Name</th>
             <th class="pointer" data-lb-sort="status">Status</th>
             <th class="pointer" data-lb-sort="due_date">Due Date</th>
             <th class="pointer" data-lb-sort="priority">Priority</th>
@@ -106,7 +105,7 @@ Every Laravel developer has felt this pain:
             <tr id="taskRow_{{ $task->id }}">
                 <td><input type="checkbox" class="selected" name="completed" value="1"></td>
                 <td>{{ $task->id }}</td>
-                <td>{{ $task->subject }}</td>
+                <td>{{ $task->name }}</td>
                 <td>{{ ucfirst($task->status) }}</td>
                 <td>{{ $task->due_date }}</td>
                 <td>{{ ucfirst($task->priority) }}</td>
@@ -162,24 +161,37 @@ Every Laravel developer has felt this pain:
 ```php
 public function index(Request $request)
 {
-    $tasks = Task::when($request->search, fn($q, $s) => 
-        $q->where('name', 'like', "%{$s}%")
-    )->paginate(20);
-
     if ($request->ajax()) {
-        return response()->json([
-            'html' => view('tasks.partials.table')->with('tasks', $tasks )->render(),
-            'has_more' => $tasks->hasMorePages(),
-            'meta' => [
-                'total' => $tasks->total(),
-                'current_page' => $tasks->currentPage(),
-                'per_page' => $tasks->perPage(),
-            ]            
-        ])->header('Cache-Control', 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0');
+
+        $tasks = Task::query()
+            ->when($request->search, fn($q, $s) =>
+                $q->where('name', 'like', "%{$s}%")
+            )
+            ->when($request->status, fn($q, $status) =>
+                $q->where('status', $status)
+            )
+            ->paginate(20);
+
+            return response()->json([
+                'html' => view('tasks.partials.table')->with('tasks', $tasks )->render(),
+                'has_more' => $tasks->hasMorePages(),
+                'meta' => [
+                    'total' => $tasks->total(),
+                    'current_page' => $tasks->currentPage(),
+                    'per_page' => $tasks->perPage(),
+                ]            
+            ])->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
     }
 
-    return view('tasks.index', compact('tasks'));
+    return view('tasks.index');
 }
+
+Route::get('/tasks');
+```
+### 5. Update Your Route
+
+```php
+Route::get('/tasks', [\App\Http\Controllers\Task\TaskController::class, 'index']);
 ```
 
 **That's it!** You now have live search, AJAX filtering, and pagination without page reloads.
