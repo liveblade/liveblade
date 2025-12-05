@@ -910,6 +910,27 @@ LiveBlade.configure({
     preserveInputs: true,    // Preserve input values
     smartUpdate: true,       // Skip identical updates
 });
+
+LiveBlade.configure({
+    debounce: 300,           // Search debounce (ms)
+    throttle: 100,           // Filter throttle (ms)
+    retryDelay: 2000,        // Retry delay on error (ms)
+    maxRetries: 3,           // Max retry attempts
+    requestTimeout: 30000,   // Request timeout (ms)
+    
+    successDuration: 1500,   // Success state duration (ms)
+    errorDuration: 3000,     // Error state duration (ms)
+    
+    updateUrl: false,        // Update browser URL on navigation
+    updateUrlMode: 'push',   // 'push' or 'replace'
+    
+    preserveScroll: true,    // Preserve scroll position
+    preserveInputs: true,    // Preserve form inputs
+    preserveFocus: true,     // Preserve focus state
+    
+    smartUpdate: true        // Only update if content changed
+});
+
 ```
 
 ### Configuration Options
@@ -935,6 +956,23 @@ LiveBlade.configure({
     updateUrl: false  // URL stays clean!
 });
 ```
+
+---
+
+## 🎨 Dark Mode
+
+Enable dark mode by adding the theme attribute:
+
+\`\`\`html
+<body data-lb-theme="dark">
+    <!-- Your content -->
+</body>
+
+<!-- Or use class -->
+<body class="lb-theme-dark">
+    <!-- Your content -->
+</body>
+\`\`\`
 
 ---
 
