@@ -7,7 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const version = '1.0.1';
+const version = '1.0.2';
 
 // ===========================================
 // CUSTOMIZE YOUR BUILD HERE
@@ -38,7 +38,7 @@ const files = [
     'src/features/rating.js',
     'src/features/word-counter.js',
     'src/features/forms.js',
-    
+
 
     // Optional Features (uncomment to enable) ||  under development phase
     // 'src/features/toast.js',

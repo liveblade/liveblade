@@ -1,5 +1,5 @@
 /*!
- * LiveBlade v1.0.1
+ * LiveBlade v1.0.2
  * Production-ready AJAX for Laravel Blade
  * @license MIT
  *
