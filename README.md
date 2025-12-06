@@ -595,7 +595,6 @@ public function states($countryCode)
     { "id": "ON", "name": "Ontario" }
 ]
 ```
-
 **Features:**
 - `{value}` placeholder replaced with selected value
 - Loading state while fetching
@@ -619,6 +618,70 @@ Route::get('/countries/{country}/states', [LocationController::class, 'states'])
 ```
 
 ---
+
+
+### 13. Forms
+AJAX forms with **server-driven success actions** — the most powerful feature after tables.
+
+```blade
+<form data-lb-form 
+      action="/tasks" 
+      method="POST"
+      data-lb-prepend="#tasksTable"
+      data-lb-success="Task created!"
+      data-lb-close="#createTaskModal">
+    @csrf
+    <input type="text" name="name" class="form-control" placeholder="Task name" required>
+    <button type="submit" class="btn btn-primary mt-3">Create Task</button>
+</form>
+```
+**Server response decides what happens next (you can override everything from PHP):**
+```php
+return response()->json([
+    'success' => true,
+    'message' => 'Task created!',
+    'html'    => view('tasks.partials.row', ['task' => $task])->render(),
+    'action'  => [
+        'type'   => 'prepend',     // prepend | append | replace | remove | refresh | redirect
+        'target' => '#tasksTable',
+        'close'  => '#createTaskModal',
+        'fade'   => 5000           // optional: fade out new row after 5s
+    ]
+]);
+```
+**Multiple actions from one form (server-side power!)**
+```php
+return response()->json([
+    'success' => true,
+    'message' => 'Bulk delete complete',
+    'action'  => [
+        'type' => 'remove-multiple',
+        'targets' => ['#taskRow_12', '#taskRow_34', '#taskRow_56']
+    ]
+]);
+```
+
+**Or replace several rows at once:**
+```php
+'action' => [
+    'type' => 'replace-multiple',
+    'items' => [
+        ['target' => '#taskRow_12', 'html' => $newRow1],
+        ['target' => '#taskRow_34', 'html' => $newRow2],
+    ]
+]
+```
+
+**Events**
+```js
+form.addEventListener('lb:form:success', e => {
+    console.log('Success!', e.detail.data);
+});
+
+form.addEventListener('lb:form:error', e => {
+    console.log('Error:', e.detail.errors);
+});
+```
 
 ## Complete Example
 
