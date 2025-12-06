@@ -294,33 +294,85 @@
     function closeModal(selector) {
         const modal = document.querySelector(selector);
         if (!modal) return;
-
-        // Bootstrap 5
-        if (window.bootstrap && window.bootstrap.Modal) {
-            const bsModal = window.bootstrap.Modal.getInstance(modal);
-            if (bsModal) {
-                bsModal.hide();
-                return;
+    
+        // 1. Bootstrap 5 (vanilla) — most common in 2025
+        if (window.bootstrap?.Modal?.getInstance) {
+            const instance = window.bootstrap.Modal.getInstance(modal);
+            if (instance) {
+                instance.hide();
+            } else {
+                // Fallback: create temporary instance
+                new window.bootstrap.Modal(modal).hide();
             }
+            return;
         }
-
-        // Bootstrap 4
-        if (window.jQuery && window.jQuery.fn.modal) {
+    
+        // 2. Bootstrap 4 (jQuery)
+        if (window.jQuery?.fn?.modal) {
             window.jQuery(modal).modal('hide');
             return;
         }
+    
+        // 3. DaisyUI, Flowbite, Tailwind UI, custom modals
+        // All of them use class-based show/hide
+        modal.classList.remove('show', 'open', 'visible');
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+        modal.removeAttribute('aria-modal');
+    
+        // Remove backdrop (all frameworks use similar classes)
+        document.querySelectorAll('.modal-backdrop, .bg-black/50, .fixed.inset-0.bg-black').forEach(el => el.remove());
+    
+        // Unlock body scroll
+        document.body.classList.remove('modal-open', 'overflow-hidden');
+    
+        // Optional: dispatch event for custom handling
+        modal.dispatchEvent(new Event('lb:modal:closed'));
 
         // Generic: remove show class and hide
-        modal.classList.remove('show');
+        modal.classList.remove('show', 'open', 'visible');
         modal.style.display = 'none';
-        document.body.classList.remove('modal-open');
-        
+        modal.setAttribute('aria-hidden', 'true');
+        modal.removeAttribute('aria-modal');
+        document.body.classList.remove('modal-open', 'overflow-hidden');
+
         // Remove backdrop
         const backdrop = document.querySelector('.modal-backdrop');
         if (backdrop) {
             backdrop.remove();
         }
-    }
+     }    
+
+    // function closeModal(selector) {
+    //     const modal = document.querySelector(selector);
+    //     if (!modal) return;
+
+    //     // Bootstrap 5
+    //     if (window.bootstrap && window.bootstrap.Modal) {
+    //         const bsModal = window.bootstrap.Modal.getInstance(modal);
+    //         if (bsModal) {
+    //             bsModal.hide();
+    //             return;
+    //         }
+    //     }
+
+    //     // Bootstrap 4
+    //     if (window.jQuery && window.jQuery.fn.modal) {
+    //         window.jQuery(modal).modal('hide');
+    //         return;
+    //     }
+
+    //     // Generic: remove show class and hide
+    //     modal.classList.remove('show');
+    //     modal.style.display = 'none';
+    //     document.body.classList.remove('modal-open');
+        
+    //     // Remove backdrop
+    //     const backdrop = document.querySelector('.modal-backdrop');
+    //     if (backdrop) {
+    //         backdrop.remove();
+    //     }
+    // }
 
     /**
      * Show toast message
