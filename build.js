@@ -37,6 +37,8 @@ const files = [
     'src/features/confirm.js',
     'src/features/rating.js',
     'src/features/word-counter.js',
+    'src/features/forms.js',
+    
 
     // Optional Features (uncomment to enable) ||  under development phase
     // 'src/features/toast.js',

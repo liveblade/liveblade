@@ -1,5 +1,5 @@
 /*!
- * LiveBlade v1.0.1 Styles
+ * LiveBlade v2.0.0 Styles
  */
 
 /* ===========================================
@@ -750,6 +750,131 @@ th[data-lb-sort][aria-sort="descending"]::after {
 .lb-counter-max {
     color: #d97706;
     font-weight: 500;
+}
+
+/* ===========================================
+   ROW ANIMATIONS (CRUD)
+   =========================================== */
+@keyframes lb-row-highlight-new {
+    0% {
+        background-color: #d1fae5;
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    20% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+
+@keyframes lb-row-highlight-updated {
+    0% {
+        background-color: #fef3c7;
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+
+@keyframes lb-row-fade-out {
+    0% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+}
+
+.lb-row-new {
+    animation: lb-row-highlight-new 1s ease-out;
+}
+
+.lb-row-updated {
+    animation: lb-row-highlight-updated 1s ease-out;
+}
+
+.lb-row-removing {
+    animation: lb-row-fade-out 0.4s ease-out forwards;
+}
+
+/* ===========================================
+   TOAST NOTIFICATIONS
+   =========================================== */
+.lb-toast-container {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 10001;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    pointer-events: none;
+}
+
+.lb-toast {
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transform: translateX(100%);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    pointer-events: auto;
+}
+
+.lb-toast-show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.lb-toast-success {
+    background-color: #10b981;
+    color: #fff;
+}
+
+.lb-toast-error {
+    background-color: #ef4444;
+    color: #fff;
+}
+
+.lb-toast-warning {
+    background-color: #f59e0b;
+    color: #fff;
+}
+
+.lb-toast-info {
+    background-color: #3b82f6;
+    color: #fff;
+}
+
+/* ===========================================
+   FORM STATES
+   =========================================== */
+.lb-form-loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.lb-input-error {
+    border-color: #ef4444 !important;
+}
+
+.lb-field-error {
+    color: #dc2626;
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+}
+
+.lb-error-message {
+    color: #dc2626;
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
 }
 
 /* ===========================================

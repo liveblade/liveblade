@@ -1,20 +1,29 @@
 /**
  * LiveBlade Feature: Confirm Action
- * "Are you sure?" confirmation before actions
+ * "Are you sure?" confirmation before actions with server-driven responses
  *
  * Usage:
- *   <!-- Basic confirm -->
+ *   <!-- Basic confirm with remove -->
  *   <button data-lb-confirm="Delete this item?" 
  *           data-lb-fetch="/items/1/delete" 
- *           data-lb-method="DELETE">
+ *           data-lb-method="DELETE"
+ *           data-lb-remove="#item-1">
  *       Delete
+ *   </button>
+ *
+ *   <!-- Confirm with replace (status change) -->
+ *   <button data-lb-confirm="Approve this order?" 
+ *           data-lb-fetch="/orders/1/approve" 
+ *           data-lb-method="POST"
+ *           data-lb-replace="#order-1">
+ *       Approve
  *   </button>
  *
  *   <!-- With target refresh -->
  *   <button data-lb-confirm="Remove from list?" 
  *           data-lb-fetch="/items/1/remove" 
  *           data-lb-method="POST"
- *           data-lb-target="#items-list">
+ *           data-lb-refresh="#items-list">
  *       Remove
  *   </button>
  *
@@ -27,10 +36,26 @@
  *   data-lb-confirm       - Confirmation message (required)
  *   data-lb-fetch         - URL to call on confirm (optional, uses href if not set)
  *   data-lb-method        - HTTP method: GET, POST, PUT, DELETE (default: POST)
- *   data-lb-target        - Selector to refresh after success (optional)
+ *   data-lb-remove        - Remove this element on success
+ *   data-lb-replace       - Replace this element with server HTML
+ *   data-lb-refresh       - Refresh these container(s) on success
+ *   data-lb-redirect      - Redirect to URL on success
+ *   data-lb-fade          - Fade out element after ms
  *   data-lb-confirm-yes   - Text for confirm button (default: "Yes")
  *   data-lb-confirm-no    - Text for cancel button (default: "Cancel")
  *   data-lb-confirm-title - Title for dialog (default: "Confirm")
+ *
+ * Server Response Format (optional - can also use HTML attributes):
+ *   {
+ *       "success": true,
+ *       "message": "Order approved!",
+ *       "html": "<tr>...</tr>",
+ *       "action": {
+ *           "type": "replace",
+ *           "target": "#order-1",
+ *           "fade": 3000
+ *       }
+ *   }
  *
  * Events:
  *   lb:confirm:show      - Before dialog shows
@@ -135,13 +160,183 @@
     }
 
     /**
+     * Fade out and remove element
+     */
+    function fadeOutAndRemove(element) {
+        element.classList.add('lb-row-removing');
+        
+        element.addEventListener('animationend', () => {
+            element.remove();
+        }, { once: true });
+
+        // Fallback removal if animation doesn't fire
+        setTimeout(() => {
+            if (element.parentNode) {
+                element.remove();
+            }
+        }, 500);
+    }
+
+    /**
+     * Replace element with new HTML
+     */
+    function replaceHtml(selector, html, fade) {
+        const target = document.querySelector(selector);
+        if (!target) return;
+
+        const temp = document.createElement('div');
+        temp.innerHTML = html.trim();
+        const newElement = temp.firstElementChild;
+
+        if (newElement) {
+            newElement.classList.add('lb-row-updated');
+            target.replaceWith(newElement);
+
+            setTimeout(() => {
+                newElement.classList.remove('lb-row-updated');
+            }, 1000);
+
+            if (fade) {
+                setTimeout(() => fadeOutAndRemove(newElement), fade);
+            }
+
+            // Re-bind LiveBlade on new content
+            if (window.LiveBlade && window.LiveBlade.bind) {
+                window.LiveBlade.bind(newElement);
+            }
+        }
+    }
+
+    /**
+     * Remove element with animation
+     */
+    function removeElement(selector) {
+        const target = document.querySelector(selector);
+        if (target) {
+            fadeOutAndRemove(target);
+        }
+    }
+
+    /**
+     * Refresh target containers
+     */
+    function refreshTargets(selectors, LiveBlade) {
+        const targets = selectors.split(',').map(s => s.trim());
+        targets.forEach(selector => {
+            const target = document.querySelector(selector);
+            if (target && LiveBlade.refresh) {
+                LiveBlade.refresh(selector);
+            }
+        });
+    }
+
+    /**
+     * Show toast message
+     */
+    function showToast(message, type = 'success', LiveBlade) {
+        if (LiveBlade.toast) {
+            LiveBlade.toast(message, type);
+            return;
+        }
+
+        // Use forms toast if available
+        if (LiveBlade.forms && LiveBlade.forms.showToast) {
+            LiveBlade.forms.showToast(message, type);
+            return;
+        }
+
+        // Fallback: create simple toast
+        const toast = document.createElement('div');
+        toast.className = `lb-toast lb-toast-${type}`;
+        toast.textContent = message;
+        
+        let container = document.querySelector('.lb-toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'lb-toast-container';
+            document.body.appendChild(container);
+        }
+        
+        container.appendChild(toast);
+        setTimeout(() => toast.classList.add('lb-toast-show'), 10);
+        setTimeout(() => {
+            toast.classList.remove('lb-toast-show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    /**
+     * Get fallback action from HTML attributes
+     */
+    function getFallbackAction(el) {
+        const action = {};
+
+        if (el.dataset.lbRemove) {
+            action.type = 'remove';
+            action.target = el.dataset.lbRemove;
+        } else if (el.dataset.lbReplace) {
+            action.type = 'replace';
+            action.target = el.dataset.lbReplace;
+        } else if (el.dataset.lbRefresh) {
+            action.type = 'refresh';
+            action.target = el.dataset.lbRefresh;
+        } else if (el.dataset.lbRedirect) {
+            action.type = 'redirect';
+            action.redirect = el.dataset.lbRedirect;
+        } else if (el.dataset.lbTarget) {
+            // Legacy support
+            action.type = 'refresh';
+            action.target = el.dataset.lbTarget;
+        }
+
+        if (el.dataset.lbFade) {
+            action.fade = parseInt(el.dataset.lbFade, 10);
+        }
+
+        return action.type ? action : null;
+    }
+
+    /**
+     * Process action from server or fallback
+     */
+    function processAction(action, html, el, LiveBlade) {
+        if (!action || !action.type) return;
+
+        switch (action.type) {
+            case 'remove':
+                if (action.target) removeElement(action.target);
+                break;
+            case 'replace':
+                if (action.target && html) replaceHtml(action.target, html, action.fade);
+                break;
+            case 'refresh':
+                if (action.target) refreshTargets(action.target, LiveBlade);
+                break;
+            case 'redirect':
+                if (action.redirect) window.location.href = action.redirect;
+                break;
+            case 'remove-multiple':
+                if (action.targets) action.targets.forEach(t => removeElement(t));
+                break;
+            case 'replace-multiple':
+                if (action.items) {
+                    action.items.forEach(item => {
+                        if (item.target && item.html) {
+                            replaceHtml(item.target, item.html, item.fade || action.fade);
+                        }
+                    });
+                }
+                break;
+        }
+    }
+
+    /**
      * Handle confirm action
      */
     async function handleConfirm(el, LiveBlade) {
         const message = el.dataset.lbConfirm;
         const url = el.dataset.lbFetch || el.getAttribute('href');
         const method = (el.dataset.lbMethod || 'POST').toUpperCase();
-        const targetSelector = el.dataset.lbTarget;
         const title = el.dataset.lbConfirmTitle;
         const confirmText = el.dataset.lbConfirmYes;
         const cancelText = el.dataset.lbConfirmNo;
@@ -187,7 +382,6 @@
 
             // Add loading state
             el.classList.add('lb-confirm-loading');
-            const originalText = el.textContent;
             el.disabled = true;
 
             try {
@@ -202,59 +396,34 @@
                     credentials: 'same-origin'
                 });
 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-
                 const data = await response.json();
 
-                // Success feedback
+                if (!response.ok || data.success === false) {
+                    throw new Error(data.error || data.message || `HTTP ${response.status}`);
+                }
+
+                // Success!
                 el.classList.remove('lb-confirm-loading');
                 el.classList.add('lb-confirm-success');
 
-                // Emit success event
-                el.dispatchEvent(new CustomEvent('lb:confirm:success', {
-                    detail: { element: el, data },
-                    bubbles: true
-                }));
+                // Determine action: server response takes priority
+                const serverAction = data.action || {};
+                const fallbackAction = getFallbackAction(el) || {};
+                const action = { ...fallbackAction, ...serverAction };
 
-                // // Refresh target if specified
-                // if (targetSelector) {
-                //     const target = document.querySelector(targetSelector);
-                //     if (target && LiveBlade.refresh) {
-                //         LiveBlade.refresh(targetSelector);
-                //     }
-                // }
+                // Process the action
+                processAction(action, data.html, el, LiveBlade);
 
-                // Handle actions on target
-                if (targetSelector) {
-                    const target = document.querySelector(targetSelector);
-                    const action = el.dataset.lbAction || 'refresh'; // default
-
-                    if (target) {
-                        switch (action) {
-
-                            case 'hide':
-                                target.style.transition = "opacity .25s ease";
-                                target.style.opacity = "0";
-                                setTimeout(() => target.remove(), 250);
-                                break;
-
-                            case 'remove':
-                                target.remove();
-                                break;
-
-                            case 'refresh':
-                                if (LiveBlade.refresh) LiveBlade.refresh(targetSelector);
-                                break;
-
-                            case 'none':
-                                // do nothing
-                                break;
-                        }
-                    }
+                // Show success message
+                if (data.message) {
+                    showToast(data.message, 'success', LiveBlade);
                 }
 
+                // Emit success event
+                el.dispatchEvent(new CustomEvent('lb:confirm:success', {
+                    detail: { element: el, data, action },
+                    bubbles: true
+                }));
 
                 // Remove success state after delay
                 setTimeout(() => {
@@ -268,6 +437,9 @@
                 el.classList.remove('lb-confirm-loading');
                 el.classList.add('lb-confirm-error');
                 el.disabled = false;
+
+                // Show error toast
+                showToast(err.message || 'An error occurred', 'error', LiveBlade);
 
                 // Emit error event
                 el.dispatchEvent(new CustomEvent('lb:confirm:error', {
