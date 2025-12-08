@@ -16,6 +16,10 @@
             if (this.cleanupInterval) return;
             this.cleanupInterval = setInterval(() => this.cleanup(), this.windowMs);
 
+            // Cleanup on page unload
+            window.addEventListener('beforeunload', () => this.destroy());
+            window.addEventListener('pagehide', () => this.destroy());
+
             // Expose on LiveBlade
             LiveBlade.rateLimiter = this;
         },
@@ -55,6 +59,14 @@
             } else {
                 this.requests.clear();
             }
+        },
+
+        destroy() {
+            if (this.cleanupInterval) {
+                clearInterval(this.cleanupInterval);
+                this.cleanupInterval = null;
+            }
+            this.requests.clear();
         }
     };
 

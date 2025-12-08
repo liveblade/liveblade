@@ -30,6 +30,7 @@
  *           "target": "#orders-list",    // CSS selector
  *           "redirect": "/orders",       // URL for redirect
  *           "close": "#modal",           // Modal to close
+ *           "reset": "#form",            // Form to reset
  *           "fade": 3000,                // Fade out after ms
  *           "items": [...],              // For replace-multiple
  *           "targets": [...]             // For remove-multiple
@@ -127,6 +128,59 @@
         if (action.close) {
             closeModal(action.close);
         }
+
+        // Reset form if specified
+        if (action.reset) {
+            resetForm(action.reset);
+        }
+    }
+
+    /**
+     * Reset a form
+     */
+    function resetForm(selector) {
+        const form = document.querySelector(selector);
+        if (!form) {
+            console.warn('LiveBlade Forms: Reset target not found:', selector);
+            return;
+        }
+
+        // Reset the form
+        if (typeof form.reset === 'function') {
+            form.reset();
+        }
+
+        // Clear any validation errors
+        clearErrors(form);
+
+        // Clear any custom inputs (Select2, TomSelect, etc.)
+        // Select2
+        if (window.jQuery?.fn?.select2) {
+            try {
+                window.jQuery(form).find('select').trigger('change');
+            } catch (e) {}
+        }
+
+        // TomSelect
+        form.querySelectorAll('[data-ts-input]').forEach(el => {
+            if (el.tomselect) {
+                try {
+                    el.tomselect.clear();
+                } catch (e) {}
+            }
+        });
+
+        // Choices.js
+        form.querySelectorAll('[data-choice]').forEach(el => {
+            if (el.choices) {
+                try {
+                    el.choices.removeActiveItems();
+                } catch (e) {}
+            }
+        });
+
+        // Dispatch event
+        form.dispatchEvent(new CustomEvent('lb:form:reset', { bubbles: true }));
     }
 
     /**
@@ -290,89 +344,156 @@
 
     /**
      * Close modal
+     * Supports: Bootstrap 5, Bootstrap 4, Tailwind, DaisyUI, Flowbite, Alpine.js, custom modals
      */
     function closeModal(selector) {
         const modal = document.querySelector(selector);
         if (!modal) return;
-    
-        // 1. Bootstrap 5 (vanilla) — most common in 2025
+
+        // 1. Bootstrap 5 (vanilla JS) - check for getInstance method
         if (window.bootstrap?.Modal?.getInstance) {
-            const instance = window.bootstrap.Modal.getInstance(modal);
-            if (instance) {
-                instance.hide();
-            } else {
-                // Fallback: create temporary instance
-                new window.bootstrap.Modal(modal).hide();
+            try {
+                const instance = window.bootstrap.Modal.getInstance(modal);
+                if (instance) {
+                    instance.hide();
+                    return;
+                }
+            } catch (e) {
+                // Fall through
             }
+        }
+
+        // 2. Bootstrap 4 (jQuery) - check for jQuery modal plugin
+        if (window.jQuery && typeof window.jQuery.fn.modal === 'function') {
+            try {
+                window.jQuery(modal).modal('hide');
+                return;
+            } catch (e) {
+                // Fall through
+            }
+        }
+
+        // 3. Flowbite - check for Flowbite modal API
+        if (window.FlowbiteInstances?.getModal) {
+            try {
+                const flowbiteModal = window.FlowbiteInstances.getModal(selector);
+                if (flowbiteModal) {
+                    flowbiteModal.hide();
+                    return;
+                }
+            } catch (e) {
+                // Fall through
+            }
+        }
+
+        // 4. DaisyUI - uses checkbox or <dialog> element
+        if (modal.tagName === 'DIALOG') {
+            try {
+                modal.close();
+                return;
+            } catch (e) {
+                // Fall through
+            }
+        }
+
+        // DaisyUI checkbox toggle pattern
+        const daisyToggle = document.querySelector(`input[type="checkbox"]#${modal.id}-toggle, input[type="checkbox"][data-modal="${modal.id}"]`);
+        if (daisyToggle) {
+            daisyToggle.checked = false;
             return;
         }
-    
-        // 2. Bootstrap 4 (jQuery)
-        if (window.jQuery?.fn?.modal) {
-            window.jQuery(modal).modal('hide');
+
+        // Also check for DaisyUI modal-toggle class
+        const modalToggle = document.querySelector(`.modal-toggle[id="${modal.id.replace('-modal', '')}"], .modal-toggle[data-target="${selector}"]`);
+        if (modalToggle && modalToggle.type === 'checkbox') {
+            modalToggle.checked = false;
             return;
         }
-    
-        // 3. DaisyUI, Flowbite, Tailwind UI, custom modals
-        // All of them use class-based show/hide
-        modal.classList.remove('show', 'open', 'visible');
-        modal.style.display = 'none';
-        modal.setAttribute('aria-hidden', 'true');
-        modal.removeAttribute('aria-modal');
-    
-        // Remove backdrop (all frameworks use similar classes)
-        document.querySelectorAll('.modal-backdrop, .bg-black/50, .fixed.inset-0.bg-black').forEach(el => el.remove());
-    
-        // Unlock body scroll
-        document.body.classList.remove('modal-open', 'overflow-hidden');
-    
-        // Optional: dispatch event for custom handling
-        modal.dispatchEvent(new Event('lb:modal:closed'));
 
-        // Generic: remove show class and hide
-        modal.classList.remove('show', 'open', 'visible');
-        modal.style.display = 'none';
-        modal.setAttribute('aria-hidden', 'true');
-        modal.removeAttribute('aria-modal');
-        document.body.classList.remove('modal-open', 'overflow-hidden');
-
-        // Remove backdrop
-        const backdrop = document.querySelector('.modal-backdrop');
-        if (backdrop) {
-            backdrop.remove();
+        // 5. Alpine.js - dispatch event for Alpine to handle
+        if (modal.hasAttribute('x-data') || modal.closest('[x-data]')) {
+            // Try to set open/show to false via Alpine
+            modal.dispatchEvent(new CustomEvent('close-modal', { bubbles: true }));
+            // Also try standard Alpine approach
+            const alpineEl = modal.closest('[x-data]') || modal;
+            if (window.Alpine && alpineEl._x_dataStack) {
+                try {
+                    const data = window.Alpine.$data(alpineEl);
+                    if (data.open !== undefined) data.open = false;
+                    if (data.show !== undefined) data.show = false;
+                    if (data.isOpen !== undefined) data.isOpen = false;
+                    if (data.showModal !== undefined) data.showModal = false;
+                    return;
+                } catch (e) {
+                    // Fall through
+                }
+            }
         }
-     }    
 
-    // function closeModal(selector) {
-    //     const modal = document.querySelector(selector);
-    //     if (!modal) return;
-
-    //     // Bootstrap 5
-    //     if (window.bootstrap && window.bootstrap.Modal) {
-    //         const bsModal = window.bootstrap.Modal.getInstance(modal);
-    //         if (bsModal) {
-    //             bsModal.hide();
-    //             return;
-    //         }
-    //     }
-
-    //     // Bootstrap 4
-    //     if (window.jQuery && window.jQuery.fn.modal) {
-    //         window.jQuery(modal).modal('hide');
-    //         return;
-    //     }
-
-    //     // Generic: remove show class and hide
-    //     modal.classList.remove('show');
-    //     modal.style.display = 'none';
-    //     document.body.classList.remove('modal-open');
+        // 6. Generic / Tailwind CSS handling
+        // Remove common "show" classes
+        modal.classList.remove('show', 'open', 'visible', 'is-active', 'is-open', 'active');
         
-    //     // Remove backdrop
-    //     const backdrop = document.querySelector('.modal-backdrop');
-    //     if (backdrop) {
-    //         backdrop.remove();
-    //     }
-    // }
+        // Add common "hide" classes (Tailwind uses 'hidden')
+        modal.classList.add('hidden');
+        
+        // Also set display none as fallback
+        modal.style.display = 'none';
+        
+        // Update ARIA attributes
+        modal.setAttribute('aria-hidden', 'true');
+        modal.removeAttribute('aria-modal');
+
+        // Remove backdrops (various frameworks use different patterns)
+        const backdropSelectors = [
+            '.modal-backdrop',                    // Bootstrap
+            '[data-modal-backdrop]',              // Flowbite
+            '.fixed.inset-0.bg-black',           // Tailwind common pattern
+            '.fixed.inset-0.bg-gray-500',        // Tailwind common pattern
+            '.fixed.inset-0.bg-gray-900',        // Tailwind common pattern
+            '.fixed.inset-0.bg-opacity-50',      // Tailwind with opacity
+            '.fixed.inset-0.bg-opacity-75',      // Tailwind with opacity
+            '.bg-black\\/50',                    // Tailwind v3 arbitrary
+            '.bg-gray-500\\/75',                 // Tailwind v3 arbitrary
+            '[data-backdrop]',                    // Generic
+            '.overlay',                           // Generic
+            '.modal-overlay',                     // Generic
+        ];
+        
+        document.querySelectorAll(backdropSelectors.join(', ')).forEach(el => {
+            // Only remove if it looks like a backdrop (fixed positioning, covers screen)
+            const style = window.getComputedStyle(el);
+            if (style.position === 'fixed' && (style.inset === '0px' || (style.top === '0px' && style.left === '0px'))) {
+                el.remove();
+            }
+        });
+
+        // Also hide sibling backdrop if exists
+        const siblingBackdrop = modal.previousElementSibling;
+        if (siblingBackdrop && (siblingBackdrop.classList.contains('modal-backdrop') || siblingBackdrop.classList.contains('fixed'))) {
+            siblingBackdrop.classList.add('hidden');
+            siblingBackdrop.style.display = 'none';
+        }
+
+        // Unlock body scroll
+        document.body.classList.remove('modal-open', 'overflow-hidden', 'overflow-y-hidden', 'fixed', 'inset-0');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+
+        // Restore scroll position if it was saved
+        if (document.body.dataset.scrollY) {
+            window.scrollTo(0, parseInt(document.body.dataset.scrollY || '0'));
+            delete document.body.dataset.scrollY;
+        }
+
+        // Dispatch event for custom handling
+        modal.dispatchEvent(new CustomEvent('lb:modal:closed', { bubbles: true }));
+        modal.dispatchEvent(new CustomEvent('modal:closed', { bubbles: true }));
+        modal.dispatchEvent(new CustomEvent('close', { bubbles: true }));
+    }
 
     /**
      * Show toast message
@@ -656,6 +777,7 @@
                 replace: replaceHtml,
                 remove: removeElement,
                 refresh: (targets) => refreshTargets(targets, LiveBlade),
+                reset: resetForm,
                 closeModal: closeModal,
                 showToast: (msg, type) => showToast(msg, type, LiveBlade),
                 processAction: (action, html) => processAction(action, html, null, LiveBlade)

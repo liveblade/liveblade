@@ -264,7 +264,11 @@
         }
 
         // History management
-        if (!append && opts.pushState && window.history && config.updateUrl) {
+        // Skip if data-lb-no-history is set on element or any parent
+        const noHistory = this.el.closest('[data-lb-no-history]') !== null || 
+                          this.el.hasAttribute('data-lb-no-history');
+        
+        if (!append && opts.pushState && window.history && config.updateUrl && !noHistory) {
             const newUrl = this.getUrl();
             const historyState = { liveblade: true, controllerId: this.id, path: this.path, params: { ...this.params } };
 

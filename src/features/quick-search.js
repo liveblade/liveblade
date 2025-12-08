@@ -93,9 +93,14 @@
     }
 
     /**
-     * Escape HTML
+     * Get escapeHtml from LiveBlade utils or define fallback
      */
     function escapeHtml(str) {
+        // Use LiveBlade's escapeHtml if available
+        if (window.LiveBlade?.utils?.escapeHtml) {
+            return window.LiveBlade.utils.escapeHtml(str);
+        }
+        // Fallback
         if (str == null) return '';
         return String(str)
             .replace(/&/g, '&amp;')
@@ -154,6 +159,12 @@
         this.input.addEventListener('focus', this._onFocus.bind(this));
         this.input.addEventListener('blur', this._onBlur.bind(this));
         this.target.addEventListener('mousedown', this._onResultClick.bind(this));
+
+        // Close on scroll (unless user opts out)
+        if (this.input.dataset.lbCloseOnScroll !== 'false') {
+            this._scrollHandler = this._onScroll.bind(this);
+            window.addEventListener('scroll', this._scrollHandler, { passive: true });
+        }
 
         // ARIA attributes
         this.input.setAttribute('role', 'combobox');
@@ -220,6 +231,12 @@
     QuickSearchController.prototype._onBlur = function () {
         // Delay to allow click on results
         setTimeout(() => this._hideResults(), 150);
+    };
+
+    QuickSearchController.prototype._onScroll = function () {
+        if (this.isOpen) {
+            this._hideResults();
+        }
     };
 
     QuickSearchController.prototype._onResultClick = function (e) {

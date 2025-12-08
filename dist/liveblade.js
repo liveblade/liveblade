@@ -23,6 +23,7 @@
  *   - rating
  *   - word-counter
  *   - forms
+ *   - toast
  */
 
 
@@ -689,7 +690,11 @@
         }
 
         // History management
-        if (!append && opts.pushState && window.history && config.updateUrl) {
+        // Skip if data-lb-no-history is set on element or any parent
+        const noHistory = this.el.closest('[data-lb-no-history]') !== null || 
+                          this.el.hasAttribute('data-lb-no-history');
+        
+        if (!append && opts.pushState && window.history && config.updateUrl && !noHistory) {
             const newUrl = this.getUrl();
             const historyState = { liveblade: true, controllerId: this.id, path: this.path, params: { ...this.params } };
 
@@ -802,7 +807,6 @@
 
 })(window, document);
 
-
 // ============================================================
 // rate-limiter.js
 // ============================================================
@@ -823,6 +827,10 @@
         init(LiveBlade) {
             if (this.cleanupInterval) return;
             this.cleanupInterval = setInterval(() => this.cleanup(), this.windowMs);
+
+            // Cleanup on page unload
+            window.addEventListener('beforeunload', () => this.destroy());
+            window.addEventListener('pagehide', () => this.destroy());
 
             // Expose on LiveBlade
             LiveBlade.rateLimiter = this;
@@ -863,6 +871,14 @@
             } else {
                 this.requests.clear();
             }
+        },
+
+        destroy() {
+            if (this.cleanupInterval) {
+                clearInterval(this.cleanupInterval);
+                this.cleanupInterval = null;
+            }
+            this.requests.clear();
         }
     };
 
@@ -877,7 +893,6 @@
     }
 
 })(window);
-
 
 // ============================================================
 // state.js
@@ -1724,9 +1739,14 @@
     }
 
     /**
-     * Escape HTML
+     * Get escapeHtml from LiveBlade utils or define fallback
      */
     function escapeHtml(str) {
+        // Use LiveBlade's escapeHtml if available
+        if (window.LiveBlade?.utils?.escapeHtml) {
+            return window.LiveBlade.utils.escapeHtml(str);
+        }
+        // Fallback
         if (str == null) return '';
         return String(str)
             .replace(/&/g, '&amp;')
@@ -1785,6 +1805,12 @@
         this.input.addEventListener('focus', this._onFocus.bind(this));
         this.input.addEventListener('blur', this._onBlur.bind(this));
         this.target.addEventListener('mousedown', this._onResultClick.bind(this));
+
+        // Close on scroll (unless user opts out)
+        if (this.input.dataset.lbCloseOnScroll !== 'false') {
+            this._scrollHandler = this._onScroll.bind(this);
+            window.addEventListener('scroll', this._scrollHandler, { passive: true });
+        }
 
         // ARIA attributes
         this.input.setAttribute('role', 'combobox');
@@ -1851,6 +1877,12 @@
     QuickSearchController.prototype._onBlur = function () {
         // Delay to allow click on results
         setTimeout(() => this._hideResults(), 150);
+    };
+
+    QuickSearchController.prototype._onScroll = function () {
+        if (this.isOpen) {
+            this._hideResults();
+        }
     };
 
     QuickSearchController.prototype._onResultClick = function (e) {
@@ -2053,7 +2085,6 @@
  *   <select data-lb-cascade 
  *           data-lb-fetch="/api/countries/{value}/states" 
  *           data-lb-target="#state-select"
- *           data-lb-loading="Loading states..."
  *           name="country">
  *       <option value="">Select Country</option>
  *       <option value="CA">Canada</option>
@@ -2292,6 +2323,7 @@
             this.child.disabled = true;
             this.child.classList.add('lb-cascade-loading');
             this.child.classList.remove('lb-cascade-error');
+            this.child.removeAttribute('aria-invalid');
 
             // Show loading text
             this.child.innerHTML = '';
@@ -2299,6 +2331,9 @@
             option.value = '';
             option.textContent = this.loadingText;
             this.child.appendChild(option);
+
+            // Announce to screen readers
+            this._announce(this.loadingText);
         }
     };
 
@@ -2306,6 +2341,7 @@
         this.child.disabled = true;
         this.child.classList.remove('lb-cascade-loading');
         this.child.classList.add('lb-cascade-error');
+        this.child.setAttribute('aria-invalid', 'true');
 
         // Show error text
         this.child.innerHTML = '';
@@ -2313,6 +2349,32 @@
         option.value = '';
         option.textContent = this.errorText;
         this.child.appendChild(option);
+
+        // Announce error to screen readers
+        this._announce(this.errorText, 'assertive');
+    };
+
+    CascadeController.prototype._announce = function (message, priority = 'polite') {
+        // Find or create announcer element
+        let announcer = document.getElementById('lb-cascade-announcer');
+        if (!announcer) {
+            announcer = document.createElement('div');
+            announcer.id = 'lb-cascade-announcer';
+            announcer.setAttribute('aria-live', priority);
+            announcer.setAttribute('aria-atomic', 'true');
+            announcer.className = 'sr-only';
+            announcer.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;';
+            document.body.appendChild(announcer);
+        }
+        
+        // Update priority if needed
+        announcer.setAttribute('aria-live', priority);
+        
+        // Clear and set message (triggers announcement)
+        announcer.textContent = '';
+        setTimeout(() => {
+            announcer.textContent = message;
+        }, 100);
     };
 
     CascadeController.prototype._emit = function (eventName, detail) {
@@ -3509,6 +3571,7 @@
  *           "target": "#orders-list",    // CSS selector
  *           "redirect": "/orders",       // URL for redirect
  *           "close": "#modal",           // Modal to close
+ *           "reset": "#form",            // Form to reset
  *           "fade": 3000,                // Fade out after ms
  *           "items": [...],              // For replace-multiple
  *           "targets": [...]             // For remove-multiple
@@ -3606,6 +3669,59 @@
         if (action.close) {
             closeModal(action.close);
         }
+
+        // Reset form if specified
+        if (action.reset) {
+            resetForm(action.reset);
+        }
+    }
+
+    /**
+     * Reset a form
+     */
+    function resetForm(selector) {
+        const form = document.querySelector(selector);
+        if (!form) {
+            console.warn('LiveBlade Forms: Reset target not found:', selector);
+            return;
+        }
+
+        // Reset the form
+        if (typeof form.reset === 'function') {
+            form.reset();
+        }
+
+        // Clear any validation errors
+        clearErrors(form);
+
+        // Clear any custom inputs (Select2, TomSelect, etc.)
+        // Select2
+        if (window.jQuery?.fn?.select2) {
+            try {
+                window.jQuery(form).find('select').trigger('change');
+            } catch (e) {}
+        }
+
+        // TomSelect
+        form.querySelectorAll('[data-ts-input]').forEach(el => {
+            if (el.tomselect) {
+                try {
+                    el.tomselect.clear();
+                } catch (e) {}
+            }
+        });
+
+        // Choices.js
+        form.querySelectorAll('[data-choice]').forEach(el => {
+            if (el.choices) {
+                try {
+                    el.choices.removeActiveItems();
+                } catch (e) {}
+            }
+        });
+
+        // Dispatch event
+        form.dispatchEvent(new CustomEvent('lb:form:reset', { bubbles: true }));
     }
 
     /**
@@ -3769,89 +3885,156 @@
 
     /**
      * Close modal
+     * Supports: Bootstrap 5, Bootstrap 4, Tailwind, DaisyUI, Flowbite, Alpine.js, custom modals
      */
     function closeModal(selector) {
         const modal = document.querySelector(selector);
         if (!modal) return;
-    
-        // 1. Bootstrap 5 (vanilla) — most common in 2025
+
+        // 1. Bootstrap 5 (vanilla JS) - check for getInstance method
         if (window.bootstrap?.Modal?.getInstance) {
-            const instance = window.bootstrap.Modal.getInstance(modal);
-            if (instance) {
-                instance.hide();
-            } else {
-                // Fallback: create temporary instance
-                new window.bootstrap.Modal(modal).hide();
+            try {
+                const instance = window.bootstrap.Modal.getInstance(modal);
+                if (instance) {
+                    instance.hide();
+                    return;
+                }
+            } catch (e) {
+                // Fall through
             }
+        }
+
+        // 2. Bootstrap 4 (jQuery) - check for jQuery modal plugin
+        if (window.jQuery && typeof window.jQuery.fn.modal === 'function') {
+            try {
+                window.jQuery(modal).modal('hide');
+                return;
+            } catch (e) {
+                // Fall through
+            }
+        }
+
+        // 3. Flowbite - check for Flowbite modal API
+        if (window.FlowbiteInstances?.getModal) {
+            try {
+                const flowbiteModal = window.FlowbiteInstances.getModal(selector);
+                if (flowbiteModal) {
+                    flowbiteModal.hide();
+                    return;
+                }
+            } catch (e) {
+                // Fall through
+            }
+        }
+
+        // 4. DaisyUI - uses checkbox or <dialog> element
+        if (modal.tagName === 'DIALOG') {
+            try {
+                modal.close();
+                return;
+            } catch (e) {
+                // Fall through
+            }
+        }
+
+        // DaisyUI checkbox toggle pattern
+        const daisyToggle = document.querySelector(`input[type="checkbox"]#${modal.id}-toggle, input[type="checkbox"][data-modal="${modal.id}"]`);
+        if (daisyToggle) {
+            daisyToggle.checked = false;
             return;
         }
-    
-        // 2. Bootstrap 4 (jQuery)
-        if (window.jQuery?.fn?.modal) {
-            window.jQuery(modal).modal('hide');
+
+        // Also check for DaisyUI modal-toggle class
+        const modalToggle = document.querySelector(`.modal-toggle[id="${modal.id.replace('-modal', '')}"], .modal-toggle[data-target="${selector}"]`);
+        if (modalToggle && modalToggle.type === 'checkbox') {
+            modalToggle.checked = false;
             return;
         }
-    
-        // 3. DaisyUI, Flowbite, Tailwind UI, custom modals
-        // All of them use class-based show/hide
-        modal.classList.remove('show', 'open', 'visible');
-        modal.style.display = 'none';
-        modal.setAttribute('aria-hidden', 'true');
-        modal.removeAttribute('aria-modal');
-    
-        // Remove backdrop (all frameworks use similar classes)
-        document.querySelectorAll('.modal-backdrop, .bg-black/50, .fixed.inset-0.bg-black').forEach(el => el.remove());
-    
-        // Unlock body scroll
-        document.body.classList.remove('modal-open', 'overflow-hidden');
-    
-        // Optional: dispatch event for custom handling
-        modal.dispatchEvent(new Event('lb:modal:closed'));
 
-        // Generic: remove show class and hide
-        modal.classList.remove('show', 'open', 'visible');
-        modal.style.display = 'none';
-        modal.setAttribute('aria-hidden', 'true');
-        modal.removeAttribute('aria-modal');
-        document.body.classList.remove('modal-open', 'overflow-hidden');
-
-        // Remove backdrop
-        const backdrop = document.querySelector('.modal-backdrop');
-        if (backdrop) {
-            backdrop.remove();
+        // 5. Alpine.js - dispatch event for Alpine to handle
+        if (modal.hasAttribute('x-data') || modal.closest('[x-data]')) {
+            // Try to set open/show to false via Alpine
+            modal.dispatchEvent(new CustomEvent('close-modal', { bubbles: true }));
+            // Also try standard Alpine approach
+            const alpineEl = modal.closest('[x-data]') || modal;
+            if (window.Alpine && alpineEl._x_dataStack) {
+                try {
+                    const data = window.Alpine.$data(alpineEl);
+                    if (data.open !== undefined) data.open = false;
+                    if (data.show !== undefined) data.show = false;
+                    if (data.isOpen !== undefined) data.isOpen = false;
+                    if (data.showModal !== undefined) data.showModal = false;
+                    return;
+                } catch (e) {
+                    // Fall through
+                }
+            }
         }
-     }    
 
-    // function closeModal(selector) {
-    //     const modal = document.querySelector(selector);
-    //     if (!modal) return;
-
-    //     // Bootstrap 5
-    //     if (window.bootstrap && window.bootstrap.Modal) {
-    //         const bsModal = window.bootstrap.Modal.getInstance(modal);
-    //         if (bsModal) {
-    //             bsModal.hide();
-    //             return;
-    //         }
-    //     }
-
-    //     // Bootstrap 4
-    //     if (window.jQuery && window.jQuery.fn.modal) {
-    //         window.jQuery(modal).modal('hide');
-    //         return;
-    //     }
-
-    //     // Generic: remove show class and hide
-    //     modal.classList.remove('show');
-    //     modal.style.display = 'none';
-    //     document.body.classList.remove('modal-open');
+        // 6. Generic / Tailwind CSS handling
+        // Remove common "show" classes
+        modal.classList.remove('show', 'open', 'visible', 'is-active', 'is-open', 'active');
         
-    //     // Remove backdrop
-    //     const backdrop = document.querySelector('.modal-backdrop');
-    //     if (backdrop) {
-    //         backdrop.remove();
-    //     }
-    // }
+        // Add common "hide" classes (Tailwind uses 'hidden')
+        modal.classList.add('hidden');
+        
+        // Also set display none as fallback
+        modal.style.display = 'none';
+        
+        // Update ARIA attributes
+        modal.setAttribute('aria-hidden', 'true');
+        modal.removeAttribute('aria-modal');
+
+        // Remove backdrops (various frameworks use different patterns)
+        const backdropSelectors = [
+            '.modal-backdrop',                    // Bootstrap
+            '[data-modal-backdrop]',              // Flowbite
+            '.fixed.inset-0.bg-black',           // Tailwind common pattern
+            '.fixed.inset-0.bg-gray-500',        // Tailwind common pattern
+            '.fixed.inset-0.bg-gray-900',        // Tailwind common pattern
+            '.fixed.inset-0.bg-opacity-50',      // Tailwind with opacity
+            '.fixed.inset-0.bg-opacity-75',      // Tailwind with opacity
+            '.bg-black\\/50',                    // Tailwind v3 arbitrary
+            '.bg-gray-500\\/75',                 // Tailwind v3 arbitrary
+            '[data-backdrop]',                    // Generic
+            '.overlay',                           // Generic
+            '.modal-overlay',                     // Generic
+        ];
+        
+        document.querySelectorAll(backdropSelectors.join(', ')).forEach(el => {
+            // Only remove if it looks like a backdrop (fixed positioning, covers screen)
+            const style = window.getComputedStyle(el);
+            if (style.position === 'fixed' && (style.inset === '0px' || (style.top === '0px' && style.left === '0px'))) {
+                el.remove();
+            }
+        });
+
+        // Also hide sibling backdrop if exists
+        const siblingBackdrop = modal.previousElementSibling;
+        if (siblingBackdrop && (siblingBackdrop.classList.contains('modal-backdrop') || siblingBackdrop.classList.contains('fixed'))) {
+            siblingBackdrop.classList.add('hidden');
+            siblingBackdrop.style.display = 'none';
+        }
+
+        // Unlock body scroll
+        document.body.classList.remove('modal-open', 'overflow-hidden', 'overflow-y-hidden', 'fixed', 'inset-0');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+
+        // Restore scroll position if it was saved
+        if (document.body.dataset.scrollY) {
+            window.scrollTo(0, parseInt(document.body.dataset.scrollY || '0'));
+            delete document.body.dataset.scrollY;
+        }
+
+        // Dispatch event for custom handling
+        modal.dispatchEvent(new CustomEvent('lb:modal:closed', { bubbles: true }));
+        modal.dispatchEvent(new CustomEvent('modal:closed', { bubbles: true }));
+        modal.dispatchEvent(new CustomEvent('close', { bubbles: true }));
+    }
 
     /**
      * Show toast message
@@ -4135,6 +4318,7 @@
                 replace: replaceHtml,
                 remove: removeElement,
                 refresh: (targets) => refreshTargets(targets, LiveBlade),
+                reset: resetForm,
                 closeModal: closeModal,
                 showToast: (msg, type) => showToast(msg, type, LiveBlade),
                 processAction: (action, html) => processAction(action, html, null, LiveBlade)
@@ -4151,6 +4335,491 @@
     // Export
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = { FormsFeature, FormsBinder };
+    }
+
+})(window, document);
+
+// ============================================================
+// toast.js
+// ============================================================
+/**
+ * LiveBlade Feature: Toast Notifications
+ * Beautiful, customizable toast notifications
+ *
+ * Usage:
+ *   // Simple
+ *   LiveBlade.toast.success('Order created!');
+ *   LiveBlade.toast.error('Something went wrong');
+ *   LiveBlade.toast.warning('Are you sure?');
+ *   LiveBlade.toast.info('New update available');
+ *
+ *   // With options
+ *   LiveBlade.toast.success('Saved!', { duration: 5000 });
+ *   LiveBlade.toast.error('Failed', { persistent: true });
+ *
+ *   // With action button
+ *   LiveBlade.toast.info('File deleted', {
+ *       action: {
+ *           text: 'Undo',
+ *           onClick: () => restoreFile()
+ *       }
+ *   });
+ *
+ *   // Direct call
+ *   LiveBlade.toast.show('Custom message', 'success', { duration: 3000 });
+ *
+ *   // Dismiss
+ *   const id = LiveBlade.toast.success('Hello');
+ *   LiveBlade.toast.dismiss(id);
+ *   LiveBlade.toast.dismissAll();
+ *
+ * Configuration (in LiveBlade.configure or data-lb-toast-* on body):
+ *   LiveBlade.configure({
+ *       toastPosition: 'top-right',      // top-left, top-center, top-right, bottom-left, bottom-center, bottom-right
+ *       toastDuration: 3000,             // Default duration in ms
+ *       toastErrorDuration: 5000,        // Duration for error toasts
+ *       toastShowClose: true,            // Show X close button
+ *       toastShowIcon: true,             // Show type icon
+ *       toastShowProgress: true,         // Show progress bar
+ *       toastPauseOnHover: true,         // Pause timer on hover
+ *       toastMaxVisible: 5,              // Max toasts visible at once
+ *       toastNewestOnTop: true,          // New toasts appear on top
+ *   });
+ *
+ * Custom Colors (CSS variables):
+ *   :root {
+ *       --lb-toast-success-bg: #10b981;
+ *       --lb-toast-success-text: #ffffff;
+ *       --lb-toast-error-bg: #ef4444;
+ *       --lb-toast-error-text: #ffffff;
+ *       --lb-toast-warning-bg: #f59e0b;
+ *       --lb-toast-warning-text: #ffffff;
+ *       --lb-toast-info-bg: #3b82f6;
+ *       --lb-toast-info-text: #ffffff;
+ *   }
+ *
+ * Events:
+ *   lb:toast:show    - When toast is shown
+ *   lb:toast:dismiss - When toast is dismissed
+ *   lb:toast:action  - When action button is clicked
+ */
+
+;(function (window, document) {
+    "use strict";
+
+    const DEFAULT_CONFIG = {
+        position: 'bottom-right',
+        duration: 3000,
+        errorDuration: 5000,
+        showClose: true,
+        showIcon: true,
+        showProgress: true,
+        pauseOnHover: true,
+        maxVisible: 5,
+        newestOnTop: true,
+    };
+
+    const ICONS = {
+        success: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>`,
+        error: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+        </svg>`,
+        warning: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>`,
+        info: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="16" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+        </svg>`,
+        close: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>`
+    };
+
+    /**
+     * Toast Manager
+     */
+    const ToastManager = {
+        container: null,
+        toasts: new Map(),
+        counter: 0,
+        config: { ...DEFAULT_CONFIG },
+
+        /**
+         * Initialize with LiveBlade
+         */
+        init(LiveBlade) {
+            // Merge config from LiveBlade
+            if (LiveBlade.config) {
+                this.configure({
+                    position: LiveBlade.config.toastPosition,
+                    duration: LiveBlade.config.toastDuration,
+                    errorDuration: LiveBlade.config.toastErrorDuration,
+                    showClose: LiveBlade.config.toastShowClose,
+                    showIcon: LiveBlade.config.toastShowIcon,
+                    showProgress: LiveBlade.config.toastShowProgress,
+                    pauseOnHover: LiveBlade.config.toastPauseOnHover,
+                    maxVisible: LiveBlade.config.toastMaxVisible,
+                    newestOnTop: LiveBlade.config.toastNewestOnTop,
+                });
+            }
+
+            // Also check body data attributes
+            const body = document.body;
+            if (body.dataset.lbToastPosition) {
+                this.config.position = body.dataset.lbToastPosition;
+            }
+
+            // Expose methods on LiveBlade
+            LiveBlade.toast = this.createApi();
+        },
+
+        /**
+         * Configure toast options
+         */
+        configure(options) {
+            Object.keys(options).forEach(key => {
+                if (options[key] !== undefined) {
+                    this.config[key] = options[key];
+                }
+            });
+
+            // Update container position if it exists
+            if (this.container) {
+                this._updateContainerPosition();
+            }
+        },
+
+        /**
+         * Create public API
+         */
+        createApi() {
+            const self = this;
+            
+            const api = function(message, type, options) {
+                return self.show(message, type || 'info', options);
+            };
+
+            api.show = (message, type, options) => self.show(message, type, options);
+            api.success = (message, options) => self.show(message, 'success', options);
+            api.error = (message, options) => self.show(message, 'error', options);
+            api.warning = (message, options) => self.show(message, 'warning', options);
+            api.info = (message, options) => self.show(message, 'info', options);
+            api.dismiss = (id) => self.dismiss(id);
+            api.dismissAll = () => self.dismissAll();
+            api.configure = (options) => self.configure(options);
+
+            return api;
+        },
+
+        /**
+         * Ensure container exists
+         */
+        _ensureContainer() {
+            if (this.container) return;
+
+            this.container = document.createElement('div');
+            this.container.className = 'lb-toast-container';
+            this.container.setAttribute('aria-live', 'polite');
+            this.container.setAttribute('aria-atomic', 'true');
+            this._updateContainerPosition();
+            document.body.appendChild(this.container);
+        },
+
+        /**
+         * Update container position class
+         */
+        _updateContainerPosition() {
+            if (!this.container) return;
+
+            // Remove old position classes
+            this.container.className = 'lb-toast-container';
+            
+            // Add new position class
+            this.container.classList.add(`lb-toast-${this.config.position}`);
+        },
+
+        /**
+         * Escape HTML to prevent XSS
+         */
+        _escapeHtml(str) {
+            if (window.LiveBlade?.utils?.escapeHtml) {
+                return window.LiveBlade.utils.escapeHtml(str);
+            }
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        },
+
+        /**
+         * Show a toast
+         */
+        show(message, type = 'info', options = {}) {
+            this._ensureContainer();
+
+            const id = ++this.counter;
+            const config = this.config;
+            
+            // Determine duration
+            let duration = options.duration ?? 
+                (type === 'error' ? config.errorDuration : config.duration);
+            
+            // Check if persistent
+            if (options.persistent) {
+                duration = 0;
+            }
+
+            // Enforce max visible
+            this._enforceMaxVisible();
+
+            // Create toast element
+            const toast = document.createElement('div');
+            toast.className = `lb-toast lb-toast-${type}`;
+            toast.setAttribute('role', 'alert');
+            toast.dataset.toastId = id;
+
+            // Build toast HTML
+            let html = '';
+
+            // Icon
+            if (config.showIcon !== false && options.showIcon !== false) {
+                html += `<div class="lb-toast-icon">${ICONS[type] || ICONS.info}</div>`;
+            }
+
+            // Content
+            html += '<div class="lb-toast-content">';
+            
+            // Title (optional)
+            if (options.title) {
+                html += `<div class="lb-toast-title">${this._escapeHtml(options.title)}</div>`;
+            }
+            
+            // Message
+            html += `<div class="lb-toast-message">${this._escapeHtml(message)}</div>`;
+            
+            // Action button (optional)
+            if (options.action) {
+                html += `<button type="button" class="lb-toast-action">${this._escapeHtml(options.action.text)}</button>`;
+            }
+            
+            html += '</div>';
+
+            // Close button
+            if (config.showClose !== false && options.showClose !== false) {
+                html += `<button type="button" class="lb-toast-close" aria-label="Close">${ICONS.close}</button>`;
+            }
+
+            // Progress bar
+            if (duration > 0 && config.showProgress !== false && options.showProgress !== false) {
+                html += '<div class="lb-toast-progress"><div class="lb-toast-progress-bar"></div></div>';
+            }
+
+            toast.innerHTML = html;
+
+            // Event handlers
+            const closeBtn = toast.querySelector('.lb-toast-close');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => this.dismiss(id));
+            }
+
+            const actionBtn = toast.querySelector('.lb-toast-action');
+            if (actionBtn && options.action) {
+                actionBtn.addEventListener('click', () => {
+                    // Emit action event
+                    this._emit('lb:toast:action', { id, action: options.action });
+                    
+                    if (typeof options.action.onClick === 'function') {
+                        options.action.onClick();
+                    }
+                    
+                    // Dismiss unless action says not to
+                    if (options.action.dismiss !== false) {
+                        this.dismiss(id);
+                    }
+                });
+            }
+
+            // Add to container
+            if (config.newestOnTop) {
+                this.container.insertBefore(toast, this.container.firstChild);
+            } else {
+                this.container.appendChild(toast);
+            }
+
+            // Trigger show animation
+            requestAnimationFrame(() => {
+                toast.classList.add('lb-toast-show');
+            });
+
+            // Store toast data
+            const toastData = {
+                element: toast,
+                timerId: null,
+                duration: duration,
+                remaining: duration,
+                startTime: Date.now()
+            };
+
+            // Start progress animation
+            const progressBar = toast.querySelector('.lb-toast-progress-bar');
+            if (progressBar && duration > 0) {
+                progressBar.style.animationDuration = `${duration}ms`;
+                progressBar.classList.add('lb-toast-progress-active');
+            }
+
+            // Auto-dismiss timer
+            if (duration > 0) {
+                toastData.timerId = setTimeout(() => this.dismiss(id), duration);
+            }
+
+            // Pause on hover
+            if (config.pauseOnHover && duration > 0) {
+                toast.addEventListener('mouseenter', () => this._pauseTimer(id));
+                toast.addEventListener('mouseleave', () => this._resumeTimer(id));
+            }
+
+            this.toasts.set(id, toastData);
+
+            // Emit show event
+            this._emit('lb:toast:show', { id, message, type, options });
+
+            return id;
+        },
+
+        /**
+         * Pause timer on hover
+         */
+        _pauseTimer(id) {
+            const toastData = this.toasts.get(id);
+            if (!toastData || !toastData.timerId) return;
+
+            // Clear current timer
+            clearTimeout(toastData.timerId);
+            toastData.timerId = null;
+
+            // Calculate remaining time
+            const elapsed = Date.now() - toastData.startTime;
+            toastData.remaining = Math.max(0, toastData.duration - elapsed);
+
+            // Pause progress bar animation
+            const progressBar = toastData.element.querySelector('.lb-toast-progress-bar');
+            if (progressBar) {
+                progressBar.style.animationPlayState = 'paused';
+            }
+        },
+
+        /**
+         * Resume timer after hover
+         */
+        _resumeTimer(id) {
+            const toastData = this.toasts.get(id);
+            if (!toastData || toastData.remaining <= 0) return;
+
+            // Update start time for next pause calculation
+            toastData.startTime = Date.now() - (toastData.duration - toastData.remaining);
+
+            // Resume progress bar animation
+            const progressBar = toastData.element.querySelector('.lb-toast-progress-bar');
+            if (progressBar) {
+                progressBar.style.animationPlayState = 'running';
+            }
+
+            // Set new timer with remaining time
+            toastData.timerId = setTimeout(() => this.dismiss(id), toastData.remaining);
+        },
+
+        /**
+         * Enforce max visible toasts
+         */
+        _enforceMaxVisible() {
+            const max = this.config.maxVisible;
+            if (!max || this.toasts.size < max) return;
+
+            // Dismiss oldest toasts
+            const toastIds = Array.from(this.toasts.keys());
+            const toRemove = toastIds.slice(0, toastIds.length - max + 1);
+            toRemove.forEach(id => this.dismiss(id));
+        },
+
+        /**
+         * Dismiss a toast
+         */
+        dismiss(id) {
+            const toastData = this.toasts.get(id);
+            if (!toastData) return;
+
+            const { element, timerId } = toastData;
+
+            // Clear timer
+            if (timerId) {
+                clearTimeout(timerId);
+            }
+
+            // Animate out
+            element.classList.remove('lb-toast-show');
+            element.classList.add('lb-toast-hide');
+
+            // Remove after animation
+            const handleAnimationEnd = () => {
+                element.remove();
+                this.toasts.delete(id);
+            };
+
+            element.addEventListener('animationend', handleAnimationEnd, { once: true });
+
+            // Fallback removal
+            setTimeout(() => {
+                if (this.toasts.has(id)) {
+                    handleAnimationEnd();
+                }
+            }, 400);
+
+            // Emit dismiss event
+            this._emit('lb:toast:dismiss', { id });
+        },
+
+        /**
+         * Dismiss all toasts
+         */
+        dismissAll() {
+            for (const id of this.toasts.keys()) {
+                this.dismiss(id);
+            }
+        },
+
+        /**
+         * Emit custom event
+         */
+        _emit(eventName, detail) {
+            document.dispatchEvent(new CustomEvent(eventName, {
+                detail,
+                bubbles: true
+            }));
+
+            // Also emit on LiveBlade if available
+            if (window.LiveBlade?.emit) {
+                window.LiveBlade.emit(eventName.replace('lb:', ''), detail);
+            }
+        }
+    };
+
+    // Register feature
+    if (window.LiveBlade) {
+        window.LiveBlade.registerFeature('toast', ToastManager);
+    }
+
+    // Export for module systems
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = ToastManager;
     }
 
 })(window, document);

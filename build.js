@@ -38,12 +38,11 @@ const files = [
     'src/features/rating.js',
     'src/features/word-counter.js',
     'src/features/forms.js',
+    'src/features/toast.js',
 
 
     // Optional Features (uncomment to enable) ||  under development phase
-    // 'src/features/toast.js',
     // 'src/features/modals.js',
-    // 'src/features/forms.js',
     // 'src/features/inline-edit.js',
     // 'src/features/bulk-actions.js',
 ];

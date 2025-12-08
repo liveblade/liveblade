@@ -7,7 +7,6 @@
  *   <select data-lb-cascade 
  *           data-lb-fetch="/api/countries/{value}/states" 
  *           data-lb-target="#state-select"
- *           data-lb-loading="Loading states..."
  *           name="country">
  *       <option value="">Select Country</option>
  *       <option value="CA">Canada</option>
@@ -246,6 +245,7 @@
             this.child.disabled = true;
             this.child.classList.add('lb-cascade-loading');
             this.child.classList.remove('lb-cascade-error');
+            this.child.removeAttribute('aria-invalid');
 
             // Show loading text
             this.child.innerHTML = '';
@@ -253,6 +253,9 @@
             option.value = '';
             option.textContent = this.loadingText;
             this.child.appendChild(option);
+
+            // Announce to screen readers
+            this._announce(this.loadingText);
         }
     };
 
@@ -260,6 +263,7 @@
         this.child.disabled = true;
         this.child.classList.remove('lb-cascade-loading');
         this.child.classList.add('lb-cascade-error');
+        this.child.setAttribute('aria-invalid', 'true');
 
         // Show error text
         this.child.innerHTML = '';
@@ -267,6 +271,32 @@
         option.value = '';
         option.textContent = this.errorText;
         this.child.appendChild(option);
+
+        // Announce error to screen readers
+        this._announce(this.errorText, 'assertive');
+    };
+
+    CascadeController.prototype._announce = function (message, priority = 'polite') {
+        // Find or create announcer element
+        let announcer = document.getElementById('lb-cascade-announcer');
+        if (!announcer) {
+            announcer = document.createElement('div');
+            announcer.id = 'lb-cascade-announcer';
+            announcer.setAttribute('aria-live', priority);
+            announcer.setAttribute('aria-atomic', 'true');
+            announcer.className = 'sr-only';
+            announcer.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;';
+            document.body.appendChild(announcer);
+        }
+        
+        // Update priority if needed
+        announcer.setAttribute('aria-live', priority);
+        
+        // Clear and set message (triggers announcement)
+        announcer.textContent = '';
+        setTimeout(() => {
+            announcer.textContent = message;
+        }, 100);
     };
 
     CascadeController.prototype._emit = function (eventName, detail) {
